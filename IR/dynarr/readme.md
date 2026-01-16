@@ -26,7 +26,9 @@ The first immediately noticeable change is in the attributes.
 
 ---
 
-Starting on the with actual function, the function declaration is a little different.
+### init()
+
+Starting with init(), the function declaration is a little different.
 ```bash
 # At -O0
 define dso_local i32 @init(ptr noundef %0, i64 noundef %1, i64 noundef %2) #0
@@ -40,3 +42,118 @@ The important thing here is the `range(a, b)` attribute. The actual range is `[a
 Take this: if a function returns a value in the range of [0, 10) and the caller has a conditional check that checks if the returned value is greater than 20, that's an example of "dead code", which can be eliminated.
 
 From this, we can learn that if we are exploring an unknown binary, its disassembly can't be assumed to have one-to-one correspondence with source because instructions might have been removed or optimized. For example: a multiplication by a value in power of 2 can be optimized with bitwise shifts.
+
+---
+
+All the alloca(s) have vanished. That's a signal for mem2reg.
+
+---
+
+-O1 performs the initial checks a little differently. It uses `llvm.umul.with.overflow.i64`, which is more optimized and safe than the standard `ugt` check.
+
+It returns a pair of values, like this: `(res, overflow_occurred)`. The `extractvalue` extracts the overflow check. If overflow occurred (1), branch to %17 (return). Else, %6.
+
+Instead of checking by division, we used multiplication. If the multiplication of cap and elem_size overflows, we get the same results downstream.
+
+Clang prioritized multiplication over division multiplication involves less cycles than division, thus comes cheaper. But cost is only one reason.
+
+Multiplication was more safer than division here.
+
+Now we extract the 24-31 bytes in the DynArr struct passed in %0. These bytes are `arr->capacity`.
+
+***Remember, intent is what matters at the end of the day. If the toolchain finds an efficient way to get the same downstream results, it will give preference to it at higher optimization levels. Therefore, what's visible in the final binary preserves the author's intent 100%, but it doesn't guarantees the intent will be preserved as per the author with 100% exactitude.***
+
+---
+
+The next noticeable difference is the return strategy.
+
+There are 4 returns in total. -O0 takes the simplest approach. It has already allocated a slot on stack for the return value, which is %4. That slot is populated every time a probability for return arises.
+
+That's why -O0 has 4 separate branches just for exit.
+```
+13:                                               ; preds = %3
+  store i32 -6, ptr %4, align 4
+  br label %40    ; exit
+
+19:                                               ; preds = %14
+  store i32 -7, ptr %4, align 4
+  br label %40    ; exit
+
+27:                                               ; preds = %20
+  store i32 -1, ptr %4, align 4
+  br label %40    ; exit
+
+28:
+  ...
+  store i32 0, ptr %4, align 4
+  br label %40
+
+40:                                               ; preds = %28, %27, %19, %13
+  %41 = load i32, ptr %4, align 4
+  ret i32 %41
+```
+Each branch involves a store operation.
+
+On the contrary, -O1 uses phi-nodes, which collapses these branches like this:
+```
+17:                                               ; preds = %14, %10, %6, %3
+  %18 = phi i32 [ -6, %3 ], [ -7, %6 ], [ 0, %14 ], [ -1, %10 ]
+  ret i32 %18
+```
+
+phi-nodes decide the right value based on where this branch received the control from.
+
+### extend()
+
+The first line:
+```c
+if (!arr || !arr->capacity) return INIT_FIRST;
+```
+... is broken in across 2 branches, i.e %2 and %4. I expect that the phi-nodes must have the same return value for both these branches, which is true.
+```
+25:                                               ; preds = %24, %17, %8, %2, %4
+  %26 = phi i32 [ -3, %4 ], [ -3, %2 ], [ 0, %8 ], [ 0, %24 ], [ -4, %17 ]
+  ret i32 %26
+```
+%4 and %2, both return -3, i.e INIT_FIRST.
+
+---
+
+Block 13 is special because it's a loop.
+```
+13:                                               ; preds = %8, %13
+  %14 = phi i64 [ %16, %13 ], [ %6, %8 ]
+  %15 = icmp ult i64 %14, %11
+  %16 = shl i64 %14, 1
+  br i1 %15, label %13, label %17, !llvm.loop !14
+```
+When I read %14, I was immediately perplexed how this is going to work. The only block that branches to %13 is %8. But when I had a close look on the source, I realized what it is.
+```c
+while (cap < total) cap *= 2;
+```
+For the first run, %13 receives control from %8. Later, it's the loop that branches %13 to %13.
+
+Notice that `cap *= 2` is represented as a left shift bitwise operation.
+
+Everything else is simple, except one thing.
+
+---
+
+Take these two instructions:
+```c
+if (arr->count+add <= arr->capacity) return SUCCESS;
+while (cap < total) cap *= 2;
+```
+
+Now the IR:
+```
+%12 = icmp ugt i64 %11, %6    ; %11: cap and %6:  arr->count+add
+%15 = icmp ult i64 %14, %11   ; %11: cap and %14: total
+```
+
+Both operations involves "less than", but why only `while (cap < total)` got ult, but the former one got ugt?
+
+LLVM prefers strict comparisons, which avoid equality checks as they are handled via control flow or negation. This simplifies analysis.
+
+---
+
