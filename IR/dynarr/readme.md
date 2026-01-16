@@ -155,5 +155,59 @@ Both operations involves "less than", but why only `while (cap < total)` got ult
 
 LLVM prefers strict comparisons, which avoid equality checks as they are handled via control flow or negation. This simplifies analysis.
 
----
+### pushOne
 
+pushOne started normal, but evolved into a form I wasn't ready for.
+
+Block 15 is where things start to get complicated. It looks normal, a equality check with 0. But where in the source that check is happening? In pushOne, it is:
+```c
+if (res != SUCCESS) return res;
+```
+... but there is no call to `extend` yet. Then how can this be `res`?
+
+As I looked down, I saw inlining happening for the first time. Blocks 17, 21 and 26 are completely replicas of the ones found in extend's IR.
+
+Block 15 and 27 are the most confusing parts here. The reason is, it glues extend with pushOne.
+
+Let's start with block 15.
+  - extend starts with this: `if (!arr || !arr->capacity)`.
+  - If you notice, we have already check `!arr` as the first thing in pushOne. There is no need to repeat that.
+  - We only have to check `if (!arr->capacity)`.
+  - If you see what is %13, it refers to bytes 24-31 in the struct ptr %0, which is the capacity member.
+
+Block 15 is how `extend` started to exist inside pushOne.
+
+Block 17 is a loop. But extend has one more line: `if (arr->count+add <= arr->capacity)`, and that is missing.
+
+Have a look at %19.
+```
+%19 = icmp ult i64 %18, %11
+```
+%18 must be `cap` and %11 must be `total`.
+
+`total` is just `arr.count+add`. add is 1 here, as 1 is passed to extend. Now notice this line: `if (arr->count+1 > arr->capacity){` in pushOne. Therefore, %11 is our `total`.
+
+%13 is our initial capacity.
+
+Still,
+```c
+if (arr->count+add <= arr->capacity) return SUCCESS;
+```
+... is missing.
+
+If you notice,
+```c
+if (arr->count+1 > arr->capacity)
+```
+... is exactly the opposite of that condition. That's redundant now, so clang removed it. Simple.
+
+Now comes block 27. There are two virtual registers with similar phi-nodes. These phi-nodes are for this block of code:
+```c
+if (arr->count+1 > arr->capacity){
+  int res = extend(arr, 1);
+  if (res != SUCCESS) return res;
+}
+```
+%28 is used as a deciding factor, whether the remaining body should execute or not and %29 is the actual return value from the function call.
+
+***pushOne is a another example that proves that the final disassembly, or even codegen assembly, may or may not resemble the way author exactly wrote it. But the intent will be intact.***
