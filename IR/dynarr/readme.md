@@ -292,4 +292,54 @@ Now, extend is inlined once again, starting from block 6.
 
 Same as before.
 
+### removeidx
 
+Block 2: `!arr`.
+
+Block 4: `!arr.ptr`.
+
+Block 7:
+  - %9 is `arr.count`.
+  - %10 is for boundcheck. %1 is the idx we are checking for.
+
+Block 11 is the interesting piece here. It is involving a lot of calculations, so I'd take a clear approach here.
+
+%0  -> arr
+%5  -> arr.ptr
+%9  -> arr.count
+%13 -> arr.elem_size
+%14 -> mul(%13, %1) -> arr.elem_size * idx
+%15 -> &(%5[%14])
+%16 -> (idx+1)
+%17 -> mul(%13, %16) -> (idx+1)*arr.elem_size
+%18 -> &(%5[%17])
+%19 -> xor(%1, -1) -> xor(idx, -1) -> -(idx-1)
+%20 -> add(%9, %19) -> add(arr.count, -(idx-1)) -> arr.count-idx-1
+%21 -> mul(%13, %20) -> arr.elem_size * (arr.count -idx -1)
+
+call memmove with %15 as the dest, %18 as the src and %21 as the total bytes required.
+
+%22 and %23 -> arr->count--
+
+---
+
+Now the insight:
+
+The xor instruction was this:
+```
+x ^ -1 == ~x == -(x+1)
+```
+This is universally true.
+
+What is not universally true is:
+```
+x ^ -n == ~x == -(x+n)
+```
+
+---
+
+At first, I was glossing over it, because it was similar to the previous bits, except the arithmetic chaos. Then I noticed the xor. That's when I decided I can't gloss.
+
+This is a great example to understand *to what extent, the compiler can go, to preserve the original intent, in the most computationally efficient and canonical way possible.*
+
+The compiler's expression of the intent was kind of coupled with the author's expression. Or, I was reading the IR alongside the source, which is why I was able to understand both easily. ***I must not confuse it with the fact that these can be magnitudes apart in reality.***
