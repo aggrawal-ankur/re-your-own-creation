@@ -211,3 +211,85 @@ if (arr->count+1 > arr->capacity){
 %28 is used as a deciding factor, whether the remaining body should execute or not and %29 is the actual return value from the function call.
 
 ***pushOne is a another example that proves that the final disassembly, or even codegen assembly, may or may not resemble the way author exactly wrote it. But the intent will be intact.***
+
+### pushMany
+
+pushMany is similar to pushOne. `extend` is inlined here as well.
+
+### *getelement
+
+`*getelement` is simple too. Only this instruction:
+```c
+if (idx >= arr->count)
+```
+... is inverted.
+```
+%10 = icmp ugt i64 %9, %1
+```
+where %9 is arr->count and %1 is idx.
+
+-O1 checks (arr->count > idx), instead of (idx >= arr->count). The reason is strict comparison. We know it already.
+
+### getarrlen and getcap
+
+These are basic functions, so, nothing interesting.
+
+### isempty
+
+This function is interesting as it involves ternary operator.
+
+What we are looking for is:
+```
+%5 = select i1 %4, i32 -8, i32 -9
+```
+%4 is the result of the comparison. If true, return -8 (IS_EMPTY). If false, return -9 (ISNOT_EMPTY)
+
+### bouncheck
+
+boundcheck() is also simple. The compiler kept uge and ult as it is, without transforming uge to something else, which is quite shocking. The reason can be the inherent complexity of the expression. The compiler can't reduce it to something else without keeping the intent intact, so it avoided!
+
+The interesting part is this:
+```
+%7 = zext i1 %6 to i32
+```
+Why zero-extend? I used int as the return type, not size_t.
+
+### setidx
+
+This one is interesting. It uses both `isempty` and `boundcheck`. And they are inlined. When functions get inlined, the interesting part is ***how the ends are glued with the original function***.
+
+Block 3 resembles isempty. It checks whether arr->count is 0 or not. Although the return value is not confirmed yet.
+
+Block 7 is the next interesting part. There is a ugt comparison between %5 and %2. %5 is the arr.count and %2 is the idx. Notice, arr.count is passed as the second arg to boundcheck, which is why it is `ub` to it.
+
+We are only checking `ub > idx`, what about (idx >= lb). Notice, `lb` is always set to 0. That means, idx is unsigned. So, there is no point of checking that.
+
+Block 15 is where we set the return value.
+
+***Remember, 0 makes the difference here. Plus, assumptions is a big part of this. idx is size_t, but if you put a ssize_t value, that is a different scenario, and since we are not allowing a ssize_t, that would lead to an undefined behavior.***
+
+### bytecopy
+
+We start with this:
+```c
+if (!main || !copy || !main->ptr);
+```
+If either of the containers are uninitialized or the first container is initialized but empty, return.
+
+We achieved it by logical-OR. But the IR uses a different approach.
+
+It checks nullability of main and copy, and performs a logical-and on the output.
+  - %3 and %4 will contain 1 if both the pointers aren't NULL. Only in this case, we will branch to block 6.
+  - If either of %3 and %4 are NULL, we'll directly jump to the return part.
+
+***Same intent, different expression.***
+
+---
+
+Now, extend is inlined once again, starting from block 6.
+
+### merge, export2stack
+
+Same as before.
+
+
