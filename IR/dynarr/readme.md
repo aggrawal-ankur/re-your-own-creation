@@ -343,3 +343,130 @@ At first, I was glossing over it, because it was similar to the previous bits, e
 This is a great example to understand *to what extent, the compiler can go, to preserve the original intent, in the most computationally efficient and canonical way possible.*
 
 The compiler's expression of the intent was kind of coupled with the author's expression. Or, I was reading the IR alongside the source, which is why I was able to understand both easily. ***I must not confuse it with the fact that these can be magnitudes apart in reality.***
+
+## -O2
+
+The first notable change is the presence of load, gep, and phi-nodes.
+
+| Opt-Level | load | gep | phi-nodes |
+| -O1       | 77   | 52  | 23        |
+| -O2       | 75   | 49  | 32        |
+
+The -O1 file is spanned across 685 lines, and -O2 across 684. Not much of a difference. But don't get fooled by it. There are differences, subtle ones. And that's exactly the challenge. Most of the stuff is identical. But I'll do it anyways.
+
+---
+
+### init()
+
+100% identical with -O1.
+
+### extend()
+
+100% identical with -O1.
+
+### pushOne()
+
+It starts same but starts to differ from the branching decision of block 8.
+
+At -O1, it is fairly simple:
+```
+br i1 %14, label %15, label %30
+```
+Branch to %15, if extension required. Else, %30.
+
+At -O2, the decision-making is different.
+```
+br i1 %14, label %17, label %15
+```
+
+If extension required, branch to 17. Else, 15.
+
+Block 17 of -O2 starts identical to block 15 of -O1.
+
+Block 15 of -O2 is this:
+```
+15:                                               ; preds = %8
+  %16 = load ptr, ptr %0, align 8, !tbaa !11
+  br label %31
+```
+Notice, we are making an unconditional jump to block 31. From this, we can infer that block 31 is where the real code for pushOne starts. Everything before is extend, starting from block 17.
+
+Everything is identical starting from block 17. Block 28 is where it breaks. These are 2 extra loads, while -O1 didn't have those:
+```
+28:                                               ; preds = %23
+  store ptr %26, ptr %0, align 8, !tbaa !11
+  store i64 %20, ptr %12, align 8, !tbaa !5
+  %29 = load i64, ptr %9, align 8, !tbaa !13
+  %30 = load i64, ptr %5, align 8, !tbaa !12
+  br label %31
+```
+
+%9 is a ptr to `arr.count` and %5 is a ptr to `arr.elem_size`.
+
+It looks confusing, but block 31 clears everything perfectly. It starts with 3 phi-nodes.
+```
+%32 = phi i64 [ %6, %15 ], [ %30, %28 ]
+%33 = phi i64 [ %10, %15 ], [ %29, %28 ]
+%34 = phi ptr [ %16, %15 ], [ %26, %28 ]
+```
+All of them decides on %15 and %28.
+
+The control branches to block 15 only if extension is not required, and then redirect to block 31, like a trampoline. You may ask, why block 15 even exist. That question will be answered soon.
+
+Block 28 is where extend ends.
+
+Looking at the source:
+```c
+void *dest = (char*)arr->ptr + (arr->count * arr->elem_size);
+memcpy(dest, value, arr->elem_size);
+arr->count++;
+```
+... we can notice that we need three variables for memcpy to work. They are arr->(ptr, count, elem_size). Those 3 phi-nodes are exactly about that.
+
+  1. %6 is the elem_size, %10 is the count and %16 is the ptr. elem_size and ptr are prone to change if realloc was called in extend.
+  2. %30 has the new elem_size value as it reloads the ptr. %29 is the count. I am not sure why it is not reused from %10. %26 is the new ptr.
+
+---
+
+I think that the use of phi-nodes is the only notable optimization here.
+
+### pushMany()
+
+It starts identical with -O1 and goes similar to pushOne. Block 18 or %19 loads arr->ptr and branches unconditionally to block 32. extend is inlined block 20 on wards.
+
+Similarly, block 29, where extend ends, have two extra load stmts.
+
+At block 32, we have 3 phi-nodes, for deciding which version of ptr, count and elem_size to use.
+
+Overall, it was just like pushOne.
+
+### *getelement getarrlen, getcap, isempty, boundcheck and setidx
+
+100% identical with -O1.
+
+### bytecopy()
+
+Fully identical except one line. -O2 reuses %16 in block 38 while -O1 has an extra gep for that.
+
+### merge()
+
+It starts identical, then deviate starting from block 33. But the pattern is identical with the previous functions.
+
+One thing I am not able to understand is why the compiler is not reusing certain values. Take this example:
+```
+27:                                               ; preds = %23
+  %28 = getelementptr inbounds i8, ptr %0, i64 8
+  %29 = load i64, ptr %28, align 8, !tbaa !12
+  ....
+
+37:
+  %42 = getelementptr inbounds i8, ptr %0, i64 8
+  %43 = load i64, ptr %42, align 8, !tbaa !12
+```
+And this is not the first time. We've noted this previously as well.
+
+### export2stack
+
+100% identical with -O1.
+
+###
