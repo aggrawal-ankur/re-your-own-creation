@@ -28,6 +28,8 @@ typedef enum {
   IS_EMPTY=-8,
   ISNOT_EMPTY=-9,
   TYPES_DONT_MATCH=-10,
+  INVALID_SIZES=-11,
+  INVALID_COUNT=-12
 } DynArrStatus;
 
 // Initialize the dynamic array

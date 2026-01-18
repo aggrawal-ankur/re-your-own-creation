@@ -1,8 +1,10 @@
 #include "dynarr.h"
 
 DynArrStatus init(DynArr *arr, size_t elem_size, size_t cap){
-  if (cap > SIZE_MAX/elem_size) return SIZEMAX_OVERFLOW;
   if (arr->capacity != 0) return ALREADY_INIT;
+
+  if (elem_size == 0 || cap == 0) return INVALID_SIZES;
+  if (cap > SIZE_MAX/elem_size) return SIZEMAX_OVERFLOW;
 
   void *ptr = malloc(cap * elem_size);
   if (!ptr) return MALLOC_FAILED;
@@ -15,17 +17,17 @@ DynArrStatus init(DynArr *arr, size_t elem_size, size_t cap){
   return SUCCESS;
 }
 
-DynArrStatus extend(DynArr *arr, size_t add){
-  if (!arr || !arr->capacity) return INIT_FIRST;
-  if (arr->count+add <= arr->capacity) return SUCCESS;
+DynArrStatus extend(DynArr *arr, size_t add_bytes){
+  if (!arr || arr->capacity == 0) return INIT_FIRST;
+  if (arr->count+add_bytes <= arr->capacity) return SUCCESS;        // Works with add_bytes=0 as well
 
-  size_t total = arr->count+add;
+  size_t total = arr->count+add_bytes;
   size_t cap = arr->capacity;
   while (cap < total) cap *= 2;
 
   void *tmp = realloc(arr->ptr, cap*arr->elem_size);
   if (!tmp) return REALLOC_FAILED;
-  
+
   arr->ptr = tmp;
   arr->capacity = cap;
 
@@ -33,8 +35,7 @@ DynArrStatus extend(DynArr *arr, size_t add){
 }
 
 DynArrStatus pushOne(DynArr *arr, const void *value){
-  if (!arr) return EMPTY_PTR;
-  if (!arr->elem_size) return INIT_FIRST;
+  if (!arr || !arr->elem_size || !arr->capacity) return INIT_FIRST;
 
   if (arr->count+1 > arr->capacity){
     int res = extend(arr, 1);
@@ -49,8 +50,8 @@ DynArrStatus pushOne(DynArr *arr, const void *value){
 }
 
 DynArrStatus pushMany(DynArr *arr, const void *elements, size_t count){
-  if (!arr) return EMPTY_PTR;
-  if (!arr->elem_size) return INIT_FIRST;
+  if (!arr || !arr->elem_size) return INIT_FIRST;
+  if (count == 0) return INVALID_COUNT;
 
   int res = extend(arr, count);
   if (res != SUCCESS) return res;
@@ -64,7 +65,7 @@ DynArrStatus pushMany(DynArr *arr, const void *elements, size_t count){
 
 const void *getelement(const DynArr *arr, size_t idx){
   if (!arr || !arr->ptr) return NULL;
-  if (idx >= arr->count) return NULL;
+  if (boundcheck(0, arr->count, idx)) return NULL;
 
   return ((char*)arr->ptr + (idx * arr->elem_size));
 }
@@ -78,7 +79,7 @@ DynArrStatus isempty(const DynArr *arr){ return (arr->count == 0) ? IS_EMPTY : I
 int boundcheck(size_t lb, size_t ub, size_t idx){ return (idx >= lb && idx < ub); }
 
 DynArrStatus setidx(DynArr *arr, const void *value, size_t idx){
-  if (isempty(arr) != ISNOT_EMPTY) return EMPTY_PTR;
+  if (!arr || arr->count == 0 || arr->capacity == 0) return INIT_FIRST;
   if (boundcheck(0, arr->count, idx) != 1) return INVALID_IDX;
 
   void *dest = (char*)arr->ptr + (idx*arr->elem_size);
@@ -97,7 +98,7 @@ DynArrStatus bytecopy(const DynArr *main, DynArr *copy){
 }
 
 DynArrStatus merge(DynArr *arr1, const DynArr *arr2){
-  if (!arr1 || !arr1->ptr || !arr2 || !arr2->ptr) return EMPTY_PTR;
+  if (!arr1 || !arr1->ptr || !arr2 || !arr2->ptr) return INIT_FIRST;
   if (extend(arr1, arr2->count) != SUCCESS) return REALLOC_FAILED;
 
   void *dest = (char*)arr1->ptr + arr1->count*arr1->elem_size;
@@ -108,32 +109,34 @@ DynArrStatus merge(DynArr *arr1, const DynArr *arr2){
 }
 
 DynArrStatus export2stack(const DynArr *dynarr, void **stackarr){
-  if (!dynarr || !dynarr->ptr) return EMPTY_PTR;
+  if (!dynarr || !dynarr->ptr) return INIT_FIRST;
 
   memcpy(*stackarr, dynarr->ptr, dynarr->count*dynarr->elem_size);
   return SUCCESS;
 }
 
 DynArrStatus insertidx(DynArr *arr, const void *value, size_t idx){
-  if (!arr || !arr->ptr) return EMPTY_PTR;
+  if (!arr || !arr->ptr) return INIT_FIRST;
+  if (arr->count == SIZE_MAX) return SIZEMAX_OVERFLOW;
   if (boundcheck(0, arr->count, idx) != 1) return INVALID_IDX;
 
   if (arr->count == arr->capacity){
-    if (extend(arr, 1) != SUCCESS) return REALLOC_FAILED;
+    int res = extend(arr, 1);
+    if (res != SUCCESS) return res;
   }
 
   void *dest = (char*)arr->ptr + (idx + 1)*arr->elem_size;
   void *src  = (char*)arr->ptr + idx*arr->elem_size;
   size_t bytes = (arr->count - idx)*arr->elem_size;
   memmove(dest, src, bytes);
-  
+
   setidx(arr, value, idx);
   arr->count++;
   return SUCCESS;
 }
 
 DynArrStatus removeidx(DynArr *arr, size_t idx){
-  if (!arr || !arr->ptr) return EMPTY_PTR;
+  if (!arr || !arr->ptr || arr->count == 0) return INIT_FIRST;
   if (boundcheck(0, arr->count, idx) != 1) return INVALID_IDX;
 
   void *dest = (char*)arr->ptr + idx*arr->elem_size;
