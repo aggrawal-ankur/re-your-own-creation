@@ -469,4 +469,67 @@ And this is not the first time. We've noted this previously as well.
 
 100% identical with -O1.
 
-###
+### insertidx
+
+It starts identical and deviate starting from block 16.
+
+This is -O1:
+```
+16:                                               ; preds = %12
+  %17 = icmp eq i64 %14, 0
+  br i1 %17, label %54, label %18
+
+18:                                               ; preds = %16
+  %19 = add i64 %10, 1
+  %20 = icmp ugt i64 %19, %14
+  br i1 %20, label %21, label %32
+```
+
+This is -O2:
+```
+16:                                               ; preds = %12
+  %17 = add i64 %10, 1
+  %18 = icmp eq i64 %10, -1
+  br i1 %18, label %31, label %19
+```
+
+At -O1, we are checking cap != 0. At -O2, this check is omitted. Meaning, something else is ensuring the compiler that cap will be non-zero? We'll find it out soon.
+
+Anyways, we add 1 to arr.count and then check it against -1? That's the next odd thing. There is nothing like that in the original source. If (arr.count + 1) is equal to -1, we branch to block 31. Else, we branch to block 19.
+
+extend() is inlined starting from block 19. Block 31 is where insertidx resumes from.
+
+Everything else is identical, with a few minute differences. Therefore, the only mystery is %18.
+
+Block 16 branch to block 31 if extension is not required. If it is required, we branch to block 19. That means, %18 is the deciding factor.
+
+The C-source is this:
+```c
+if (arr->count == arr->capacity){
+  if (extend(arr, 1) != SUCCESS) return REALLOC_FAILED;
+}
+```
+
+The deciding factor is `(arr->count == arr->capacity)`.
+
+This (count+1)=-1 will only be true in case of count being -2. What is the compiler thinking! It branch to 19 if false, which starts extension of arr. It branch to 31 if true, which means no extension and jump to the main logic. How (count+1)=-1 can be the deciding factor here?
+
+For some reason, I am sensing that a lot of things are wrong with this function.
+  - There is no check for cap being 0. That should be the second thing after the first check.
+  - I am also unsure about boundcheck for single valued arrays.
+
+`count` is an unsigned 64-bit integer. -1 is the complicated thing. Since anything -ve can't be represented in 1s complement, we have to use 2s complement. -1 is 0xffff_ffff_ffff_ffff or 64 1s. Basically, -1 is SIZE_MAX, or UINT64_MAX in LLVM terms.
+
+If count is equal to SIZE_MAX, and we add 1 to it, the contents will wrap around.
+
+This thing is way more problematic. Let's start with init(). We don't check if cap or elem_size are greater than 0 or not. If they are less than equal to 0, I am not doing anything to stop that. malloc(0) itself is an implementation-defined thing. This thing is wrong.
+
+Now come to insertidx. First of all, there is no check regarding element count being 0. Second, count==SIZE_MAX is something I should logically account for.
+
+For these reasons, I have to make necessary changes before continuing.
+
+## -O3
+
+Before I make any changes in the source, I had to see where -O3 is standing, and it is completely identical with -O2.
+
+Now I'll go and make those changes and I'll analyze them once again.
