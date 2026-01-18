@@ -533,3 +533,36 @@ For these reasons, I have to make necessary changes before continuing.
 Before I make any changes in the source, I had to see where -O3 is standing, and it is completely identical with -O2.
 
 Now I'll go and make those changes and I'll analyze them once again.
+
+# After Modification
+
+I have modified the source, only few minor additions.
+
+Line stats:
+
+| Source   | -O0  | -O1 | -O2 | -O3 |
+| :-----   | :--  | :-- | :-- | :-- |
+| Initial  | 1044 | 685 | 684 | 684 |
+| Modified | 1102 | 724 | 714 | 714 |
+
+I've directly started with -O3 because the initial stuff would bore me out easily at this point.
+
+---
+
+Have a look at this block from init():
+```
+7:                                                ; preds = %3
+  %8 = icmp eq i64 %1, 0    ; elem_size == 0
+  %9 = icmp eq i64 %2, 0    ; cap == 0
+  %10 = or i1 %8, %9
+  br i1 %10, label %21, label %11
+```
+Notice the use of `or`. I am wondering what forced clang to use this, because previous IRs didn't. Although I should mention that it is the only instance of it.
+
+I slowly skimmed over -O3 and found most of the things same, for obvious reasons.
+
+# Conclusion
+
+Here comes the end of analyzing dynamic array's LLVM IR. Next is dynamic string's LLVM IR.
+
+Done with step 1.
