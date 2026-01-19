@@ -11,74 +11,6 @@ DynStrStatus init(DynString *str, size_t capacity){
   return SUCCESS;
 }
 
-DynStrStatus getstr(const DynString *str, size_t idx, char **out){
-  if (!str->data) return EMPTY_STR;
-  if (idx >= str->len) return INVALID_IDX;
-
-  *out = &str->data[idx];
-  return SUCCESS;
-}
-
-DynStrStatus getslicedstr(const DynString *str, size_t start, size_t end, DynString *outstr){
-  if (!str->data) return EMPTY_STR;
-  if (start >= str->len || end >= str->len) return INVALID_IDX;
-
-  size_t slen = end-start+1;
-  memcpy(outstr->data, &str->data[start], slen);
-  outstr->data[slen] = '\0';
-
-  return SUCCESS;
-}
-
-size_t lenstr(const char *str){
-  size_t len = 0;
-  while (*(str++) != '\0') len++;
-  return len;
-}
-
-int boundcheck(size_t lb, size_t ub, size_t idx){ return (idx>= lb && idx <= ub) ? 0 : 1; }
-
-char char2lcase(char c){
-  if (c >= 'A' && c <= 'Z') return c | 0x20;
-  return c;
-}
-
-char char2ucase(char c){
-  if (c >= 'a' && c <= 'z') return c & ~0x20;
-  return c;
-}
-
-DynStrStatus clearstr(DynString *str){
-  if (!str->data) return EMPTY_STR;
-
-  str->len = 0;
-  if (str->data) str->data[0] = '\0';
-  return SUCCESS;
-}
-
-DynStrStatus freestr(DynString *str){
-  if (!str->data) return EMPTY_STR;
-
-  free(str->data);
-  str->cap = 0;
-  str->len = 0;
-  return SUCCESS;
-}
-
-DynStrStatus islcase(const char *str){
-  for (size_t i = 0; str[i] != '\0'; i++) {
-    if (str[i] >= 'A' && str[i] <= 'Z') return NOT_LCASE;
-  }
-  return SUCCESS;
-}
-
-DynStrStatus isucase(const char *str){
-  for (size_t i = 0; str[i] != '\0'; i++) {
-    if (str[i] >= 'a' && str[i] <= 'z') return NOT_UCASE;
-  }
-  return SUCCESS;
-}
-
 DynStrStatus extendCap(DynString *str, size_t required){
   if (str->cap >= required+1) return EXT_NOT_REQUIRED;
 
@@ -119,21 +51,31 @@ DynStrStatus concat2d(DynString *dest, const DynString *src){
   return SUCCESS;
 }
 
-DynStrStatus cmp2strs(const DynString *str1, const DynString *str2, int sensitivity){
-  if (str1->len != str2->len) return STRS_NOT_EQUAL;
+size_t lenstr(const char *str){
+  size_t len = 0;
+  while (*(str++) != '\0') len++;
+  return len;
+}
 
-  // sensitivity: 0 (sensitive) 1 (insensitive)
-  if (sensitivity == 0){
-    if (memcmp(str1->data, str2->data, str1->len) == 0) return SUCCESS;
-    return STRS_NOT_EQUAL;
-  }
+int boundcheck(size_t lb, size_t ub, size_t idx){ return (idx>= lb && idx <= ub) ? 0 : 1; }
 
-  char tmp1[str1->len], tmp2[str2->len];
-  tolcase(str1->data, tmp1);
-  tolcase(str2->data, tmp2);
+DynStrStatus getstr(const DynString *str, size_t idx, char **out){
+  if (!str->data || str->len == 0) return EMPTY_STR;
+  if (idx >= str->len) return INVALID_IDX;
 
-  if (memcmp(tmp1, tmp2, str1->len) == 0) return SUCCESS;
-  return STRS_NOT_EQUAL;
+  *out = &str->data[idx];
+  return SUCCESS;
+}
+
+DynStrStatus getslicedstr(const DynString *str, size_t start, size_t end, DynString *outstr){
+  if (!str->data || str->len == 0) return EMPTY_STR;
+  if (start >= str->len || end >= str->len) return INVALID_IDX;
+
+  size_t slen = end-start+1;
+  memcpy(outstr->data, &str->data[start], slen);
+  outstr->data[slen] = '\0';
+
+  return SUCCESS;
 }
 
 DynStrStatus copystr(const char *src, char *dest){
@@ -141,6 +83,30 @@ DynStrStatus copystr(const char *src, char *dest){
 
   memcpy(dest, src, lenstr(src));
   dest[lenstr(src)] = '\0';
+  return SUCCESS;
+}
+
+char char2lcase(char c){
+  if (c >= 'A' && c <= 'Z') return c | 0x20;
+  return c;
+}
+
+char char2ucase(char c){
+  if (c >= 'a' && c <= 'z') return c & ~0x20;
+  return c;
+}
+
+DynStrStatus islcase(const char *str){
+  for (size_t i = 0; str[i] != '\0'; i++) {
+    if (str[i] >= 'A' && str[i] <= 'Z') return NOT_LCASE;
+  }
+  return SUCCESS;
+}
+
+DynStrStatus isucase(const char *str){
+  for (size_t i = 0; str[i] != '\0'; i++) {
+    if (str[i] >= 'a' && str[i] <= 'z') return NOT_UCASE;
+  }
   return SUCCESS;
 }
 
@@ -174,12 +140,21 @@ DynStrStatus toucase(const char *str, char *ucase){
   return TOUCASE_FAILED;
 }
 
-DynStrStatus exportdyntobuff(const DynString *str, char *buff){
-  // buff must be callee-allocated, use lenstr on dynamic str to find the length and create that big buffer
-  if (!str->data) return EMPTY_STR;
+DynStrStatus cmp2strs(const DynString *str1, const DynString *str2, int sensitivity){
+  if (str1->len != str2->len) return STRS_NOT_EQUAL;
 
-  memcpy(buff, str->data, str->len);
-  return SUCCESS;
+  // sensitivity: 0 (sensitive) 1 (insensitive)
+  if (sensitivity == 0){
+    if (memcmp(str1->data, str2->data, str1->len) == 0) return SUCCESS;
+    return STRS_NOT_EQUAL;
+  }
+
+  char tmp1[str1->len], tmp2[str2->len];
+  tolcase(str1->data, tmp1);
+  tolcase(str2->data, tmp2);
+
+  if (memcmp(tmp1, tmp2, str1->len) == 0) return SUCCESS;
+  return STRS_NOT_EQUAL;
 }
 
 size_t findchar(const char *str, char c, int sensitivity){
@@ -198,7 +173,31 @@ size_t findchar(const char *str, char c, int sensitivity){
   return count;
 }
 
-// Substring operations based on the KMP algorithm
+DynStrStatus exportdyntobuff(const DynString *str, char *buff){
+  if (!str->data) return EMPTY_STR;
+
+  memcpy(buff, str->data, str->len);
+  return SUCCESS;
+}
+
+DynStrStatus clearstr(DynString *str){
+  if (!str->data) return EMPTY_STR;
+
+  str->len = 0;
+  if (str->data) str->data[0] = '\0';
+  return SUCCESS;
+}
+
+DynStrStatus freestr(DynString *str){
+  if (!str->data) return EMPTY_STR;
+
+  free(str->data);
+  str->cap = 0;
+  str->len = 0;
+  return SUCCESS;
+}
+
+/* Substring operations based on the KMP algorithm */
 
 int kmp_build_lps(const char *pat, size_t plen, size_t *lps){
   if (!pat || plen == 0) return -1;
