@@ -8,20 +8,21 @@
 
 // Return codes
 typedef enum {
-  SUCCESS = 0,
-  EMPTY_STR = -1,
-  MALLOC_FAILED = -2,
-  REALLOC_FAILED = -3,
-  INVALID_IDX = -4,
-  NOT_LCASE = -6,
-  NOT_UCASE = -7,
-  TOLCASE_FAILED = -8,
-  TOUCASE_FAILED = -9,
-  STRS_NOT_EQUAL = -10,
-  SUBSTR_NOT_FOUND = -11,
-  EXT_NOT_REQUIRED = -12,
-  USE_CONCAT = -13,
-  EMPTY_SRC = -14,
+  SUCCESS,
+  ALREADY_INIT,
+  INVALID_CAP,
+  MALLOC_FAILED,
+  INVALID_DPTR,
+  REALLOC_FAILED,
+  INVALID_BUFF,
+  INVALID_IDX,
+  NOT_LCASE,
+  NOT_UCASE,
+  TOLCASE_FAILED,
+  TOUCASE_FAILED,
+  STRS_NOT_EQUAL,
+  CMP_FAILED,
+  SUBSTR_NOT_FOUND,
 } DynStrStatus;
 
 // Dynamic string struct
@@ -39,17 +40,14 @@ DynStrStatus init(DynString *str, size_t capacity);
 // Calculates the length of a string :: callee must ensure str validation
 size_t lenstr(const char *str);
 
-// Populate a new dynamic string with a char buff
+// Copy a stack buff to a dynamic string
 DynStrStatus populate(DynString *dest, const char *src);
-
-// Concatenate a char buff into an existing dynamic string
-#define concatbuff populate
 
 // Concatenate two dynamic strings in dest
 DynStrStatus concat2d(DynString *dest, const DynString *src);
 
 // Verify an idx against a set of bounds
-int boundcheck(size_t lb, size_t ub, size_t idx);
+DynStrStatus boundcheck(size_t lb, size_t ub, size_t idx);
 
 // Returns a pointer to the dynamic string
 DynStrStatus getstr(const DynString *str, size_t idx, char **out);
@@ -60,10 +58,10 @@ DynStrStatus getslicedstr(const DynString *str, size_t start, size_t end, DynStr
 // Compare two dynamic strings
 DynStrStatus cmp2strs(const DynString *str1, const DynString *str2, int sensitivity);
 
-// Clear and mark a dynamic string to be reused again.
+// Clear and mark a dynamic string to be reused again (capacity intact)
 DynStrStatus clearstr(DynString *str);
 
-// Deallocate the dynamic string completely
+// Deallocate the dynamic string completely (release the capacity)
 DynStrStatus freestr(DynString *str);
 
 // Export a dynamic string to a char buffer

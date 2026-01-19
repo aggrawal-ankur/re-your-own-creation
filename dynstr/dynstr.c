@@ -1,8 +1,11 @@
 #include "dynstr.h"
 
 DynStrStatus init(DynString *str, size_t capacity){
+  if (str->cap != 0) return -ALREADY_INIT;
+  if (capacity == 0) return -INVALID_CAP;
+
   str->data = malloc(capacity);
-  if (!str->data) return MALLOC_FAILED;
+  if (!str->data) return -MALLOC_FAILED;
 
   str->len = 0;
   str->cap = capacity;
@@ -12,13 +15,14 @@ DynStrStatus init(DynString *str, size_t capacity){
 }
 
 DynStrStatus extendCap(DynString *str, size_t required){
-  if (str->cap >= required+1) return EXT_NOT_REQUIRED;
+  if (!str || !str->data) return -INVALID_DPTR;
+  if (str->cap >= required+1) return SUCCESS;
 
   size_t ncap = str->cap;
   while (ncap < required+1) ncap *= 2;
 
   char *tmp = realloc(str->data, ncap);
-  if (!tmp) return REALLOC_FAILED;
+  if (!tmp) return -REALLOC_FAILED;
 
   str->data = tmp;
   str->cap = ncap;
@@ -26,10 +30,13 @@ DynStrStatus extendCap(DynString *str, size_t required){
 }
 
 DynStrStatus populate(DynString *dest, const char *src){
-  if (!src) return EMPTY_STR;
+  if (!dest || !dest->data) return -INVALID_DPTR;
+  if (!src) return  -INVALID_BUFF;
 
   size_t nlen = dest->len + lenstr(src);
-  if (extendCap(dest, nlen) == REALLOC_FAILED) return REALLOC_FAILED;
+
+  int res = extendCap(dest, nlen) == -REALLOC_FAILED;
+  if (res != SUCCESS) return res;
 
   memcpy(dest->data+dest->len, src, lenstr(src));
   dest->len = nlen;
@@ -39,10 +46,12 @@ DynStrStatus populate(DynString *dest, const char *src){
 }
 
 DynStrStatus concat2d(DynString *dest, const DynString *src){
-  if (!src) return EMPTY_STR;
+  if (!src || !src->data || !dest->data || !dest) return -INVALID_DPTR;
 
   size_t nlen = dest->len + src->len;
-  if (extendCap(dest, nlen) == REALLOC_FAILED) return REALLOC_FAILED;
+
+  int res = extendCap(dest, nlen) == -REALLOC_FAILED;
+  if (res != SUCCESS) return res;
 
   memcpy((dest->data + dest->len), src->data, src->len);
   dest->len += src->len;
@@ -52,24 +61,25 @@ DynStrStatus concat2d(DynString *dest, const DynString *src){
 }
 
 size_t lenstr(const char *str){
+  if (!str) return -INVALID_BUFF;
   size_t len = 0;
   while (*(str++) != '\0') len++;
   return len;
 }
 
-int boundcheck(size_t lb, size_t ub, size_t idx){ return (idx>= lb && idx <= ub) ? 0 : 1; }
+DynStrStatus boundcheck(size_t lb, size_t ub, size_t idx){ return (idx>= lb && idx <= ub) ? SUCCESS : -INVALID_IDX; }
 
 DynStrStatus getstr(const DynString *str, size_t idx, char **out){
-  if (!str->data || str->len == 0) return EMPTY_STR;
-  if (idx >= str->len) return INVALID_IDX;
+  if (!str || !str->data) return -INVALID_DPTR;
+  if (boundcheck(0, str->len, idx)) return -INVALID_IDX;
 
   *out = &str->data[idx];
   return SUCCESS;
 }
 
 DynStrStatus getslicedstr(const DynString *str, size_t start, size_t end, DynString *outstr){
-  if (!str->data || str->len == 0) return EMPTY_STR;
-  if (start >= str->len || end >= str->len) return INVALID_IDX;
+  if (!str || !str->data || !outstr || !outstr->data) return -INVALID_DPTR;
+  if (start >= str->len || end >= str->len) return -INVALID_IDX;
 
   size_t slen = end-start+1;
   memcpy(outstr->data, &str->data[start], slen);
@@ -79,7 +89,7 @@ DynStrStatus getslicedstr(const DynString *str, size_t start, size_t end, DynStr
 }
 
 DynStrStatus copystr(const char *src, char *dest){
-  if (!src) return EMPTY_STR;
+  if (!src || !dest) return -INVALID_BUFF;
 
   memcpy(dest, src, lenstr(src));
   dest[lenstr(src)] = '\0';
@@ -97,23 +107,31 @@ char char2ucase(char c){
 }
 
 DynStrStatus islcase(const char *str){
+  if (!str) return -INVALID_BUFF;
+
   for (size_t i = 0; str[i] != '\0'; i++) {
-    if (str[i] >= 'A' && str[i] <= 'Z') return NOT_LCASE;
+    if (str[i] >= 'A' && str[i] <= 'Z')
+      return -NOT_LCASE;
   }
   return SUCCESS;
 }
 
 DynStrStatus isucase(const char *str){
+  if (!str) return -INVALID_BUFF;
+
   for (size_t i = 0; str[i] != '\0'; i++) {
-    if (str[i] >= 'a' && str[i] <= 'z') return NOT_UCASE;
+    if (str[i] >= 'a' && str[i] <= 'z')
+      return -NOT_UCASE;
   }
   return SUCCESS;
 }
 
 DynStrStatus tolcase(const char *str, char *lcase){
-  if (!str) return EMPTY_STR;
+  if (!str) return -INVALID_BUFF;
 
-  if (copystr(str, lcase) == EMPTY_STR) return EMPTY_STR;
+  int res = copystr(str, lcase);
+  if (res != SUCCESS) return res;
+
   int i = 0;
   while (lcase[i] != '\0'){
     lcase[i] = char2lcase(lcase[i]);
@@ -121,14 +139,16 @@ DynStrStatus tolcase(const char *str, char *lcase){
   }
   lcase[i] = '\0';
 
-  if (islcase(lcase) == 0) return 0;
-  return TOLCASE_FAILED;
+  if (islcase(lcase) == SUCCESS) return SUCCESS;
+  return -TOLCASE_FAILED;
 }
 
 DynStrStatus toucase(const char *str, char *ucase){
-  if (!str) return EMPTY_STR;
+  if (!str) return -INVALID_BUFF;
 
-  if (copystr(str, ucase) == EMPTY_STR) return EMPTY_STR;
+  int res = copystr(str, ucase);
+  if (res != SUCCESS) return res;
+
   int i = 0;
   while (ucase[i] != '\0'){
     ucase[i] = char2ucase(ucase[i]);
@@ -136,37 +156,45 @@ DynStrStatus toucase(const char *str, char *ucase){
   }
   ucase[i] = '\0';
 
-  if (isucase(ucase) == 0) return 0;
-  return TOUCASE_FAILED;
+  if (isucase(ucase) == SUCCESS) return SUCCESS;
+  return -TOUCASE_FAILED;
 }
 
 DynStrStatus cmp2strs(const DynString *str1, const DynString *str2, int sensitivity){
-  if (str1->len != str2->len) return STRS_NOT_EQUAL;
+  if (!str1 || !str1->data || !str2->data || !str2) return -INVALID_DPTR;
+  if (str1->len != str2->len) return -STRS_NOT_EQUAL;
 
   // sensitivity: 0 (sensitive) 1 (insensitive)
   if (sensitivity == 0){
-    if (memcmp(str1->data, str2->data, str1->len) == 0) return SUCCESS;
-    return STRS_NOT_EQUAL;
+    int res = memcmp(str1->data, str2->data, str1->len);
+    if (res == 0) return SUCCESS;
+    return -STRS_NOT_EQUAL;
   }
 
   char tmp1[str1->len], tmp2[str2->len];
-  tolcase(str1->data, tmp1);
-  tolcase(str2->data, tmp2);
+  if (tolcase(str1->data, tmp1) != SUCCESS) return -CMP_FAILED;
+  if (tolcase(str2->data, tmp2) != SUCCESS) return -CMP_FAILED;
 
   if (memcmp(tmp1, tmp2, str1->len) == 0) return SUCCESS;
-  return STRS_NOT_EQUAL;
+  return -STRS_NOT_EQUAL;
 }
 
 size_t findchar(const char *str, char c, int sensitivity){
+  if (!str) return -INVALID_BUFF;
   size_t count = 0;
 
   // case insensitive (1)
   if (sensitivity){
-    for (int i = 0; str[i] != '\0'; i++) if (char2lcase(str[i]) == char2lcase(c)) count++;
+    for (int i = 0; str[i] != '\0'; i++){
+      if (char2lcase(str[i]) == char2lcase(c))
+        count++;
+    }
   } 
   // case sensitive (0)
   else{
-    for (int i = 0; str[i] != '\0'; i++) if (str[i] == c) count++;
+    for (int i = 0; str[i] != '\0'; i++)
+      if (str[i] == c)
+        count++;
   }
 
   if (!count) return -1;
@@ -174,14 +202,14 @@ size_t findchar(const char *str, char c, int sensitivity){
 }
 
 DynStrStatus exportdyntobuff(const DynString *str, char *buff){
-  if (!str->data) return EMPTY_STR;
+  if (!str || !str->data) return -INVALID_DPTR;
 
   memcpy(buff, str->data, str->len);
   return SUCCESS;
 }
 
 DynStrStatus clearstr(DynString *str){
-  if (!str->data) return EMPTY_STR;
+  if (!str || !str->data) return -INVALID_DPTR;
 
   str->len = 0;
   if (str->data) str->data[0] = '\0';
@@ -189,7 +217,7 @@ DynStrStatus clearstr(DynString *str){
 }
 
 DynStrStatus freestr(DynString *str){
-  if (!str->data) return EMPTY_STR;
+  if (!str || !str->data) return -INVALID_DPTR;
 
   free(str->data);
   str->cap = 0;
@@ -276,7 +304,9 @@ int kmp_search_all(const char *str, size_t slen, const char *pat, size_t plen, s
 }
 
 DynStrStatus isin(const DynString *str, const char *substr, int sensitivity){
-  if (!str->data || !substr) return EMPTY_STR;
+  if (!str || !str->data) return -INVALID_DPTR;
+  if (!substr) return -INVALID_BUFF;
+
   size_t sublen = lenstr(substr);
 
   // sensitivity == 1 :: case insensitive
@@ -292,7 +322,9 @@ DynStrStatus isin(const DynString *str, const char *substr, int sensitivity){
 }
 
 ssize_t firstOccurrence(const DynString *str, const char *substr, int sensitivity){
-  if (!str->data || !substr) return -1;
+  if (!str || !str->data) return -INVALID_DPTR;
+  if (!substr) return -INVALID_BUFF;
+
   size_t sublen = lenstr(substr);
 
   // case insensitive (1)
@@ -309,7 +341,9 @@ ssize_t firstOccurrence(const DynString *str, const char *substr, int sensitivit
 }
 
 DynStrStatus allOccurrences(const DynString *str, const char *substr, size_t *indices, size_t *occ_count, int sensitivity){
-  if (!str || !str->data || !substr) return EMPTY_STR;
+  if (!str || !str->data) return -INVALID_DPTR;
+  if (!substr) return -INVALID_BUFF;
+
   size_t sublen = lenstr(substr);
 
   // case insensitive (1)
