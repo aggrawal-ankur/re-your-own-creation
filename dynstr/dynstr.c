@@ -14,14 +14,14 @@ DynStrStatus init(DynString *str, size_t capacity){
   return SUCCESS;
 }
 
-DynStrStatus extendCap(DynString *str, size_t required){
+DynStrStatus extendCap(DynString *str, size_t add){
   if (!str || !str->data) return -INVALID_DPTR;
-  if (str->cap >= required+1) return SUCCESS;
+  if (str->cap >= add)  return  SUCCESS;
 
   size_t ncap = str->cap;
-  while (ncap < required+1) ncap *= 2;
+  while (ncap < add+1) ncap *= 2;
 
-  char *tmp = realloc(str->data, ncap);
+  void *tmp = realloc(str->data, ncap);
   if (!tmp) return -REALLOC_FAILED;
 
   str->data = tmp;
@@ -31,11 +31,11 @@ DynStrStatus extendCap(DynString *str, size_t required){
 
 DynStrStatus populate(DynString *dest, const char *src){
   if (!dest || !dest->data) return -INVALID_DPTR;
-  if (!src) return  -INVALID_BUFF;
+  if (!src) return -INVALID_BUFF;
 
   size_t nlen = dest->len + lenstr(src);
 
-  int res = extendCap(dest, nlen) == -REALLOC_FAILED;
+  int res = extendCap(dest, nlen+1);
   if (res != SUCCESS) return res;
 
   memcpy(dest->data+dest->len, src, lenstr(src));
@@ -45,29 +45,15 @@ DynStrStatus populate(DynString *dest, const char *src){
   return SUCCESS;
 }
 
-DynStrStatus concat2d(DynString *dest, const DynString *src){
-  if (!src || !src->data || !dest->data || !dest) return -INVALID_DPTR;
-
-  size_t nlen = dest->len + src->len;
-
-  int res = extendCap(dest, nlen) == -REALLOC_FAILED;
-  if (res != SUCCESS) return res;
-
-  memcpy((dest->data + dest->len), src->data, src->len);
-  dest->len += src->len;
-  dest->data[dest->len] = '\0';
-
-  return SUCCESS;
-}
-
 size_t lenstr(const char *str){
   if (!str) return -INVALID_BUFF;
+
   size_t len = 0;
   while (*(str++) != '\0') len++;
   return len;
 }
 
-DynStrStatus boundcheck(size_t lb, size_t ub, size_t idx){ return (idx>= lb && idx <= ub) ? SUCCESS : -INVALID_IDX; }
+DynStrStatus boundcheck(size_t lb, size_t ub, size_t idx){ return (idx>= lb && idx < ub) ? SUCCESS : -INVALID_IDX; }
 
 DynStrStatus getstr(const DynString *str, size_t idx, char **out){
   if (!str || !str->data) return -INVALID_DPTR;
@@ -77,22 +63,23 @@ DynStrStatus getstr(const DynString *str, size_t idx, char **out){
   return SUCCESS;
 }
 
-DynStrStatus getslicedstr(const DynString *str, size_t start, size_t end, DynString *outstr){
-  if (!str || !str->data || !outstr || !outstr->data) return -INVALID_DPTR;
-  if (start >= str->len || end >= str->len) return -INVALID_IDX;
+DynStrStatus getslicedstr(const DynString *str, size_t start, size_t end, char *outstr){
+  if (!str || !str->data) return -INVALID_DPTR;
+  if (start >= str->len || end >= str->len) return -INVALID_RANGE;
 
-  size_t slen = end-start+1;
-  memcpy(outstr->data, &str->data[start], slen);
-  outstr->data[slen] = '\0';
+  size_t slen = end-start;    // [start, end)
+  memcpy(outstr, &str->data[start], slen);
+  outstr[slen] = '\0';
 
   return SUCCESS;
 }
 
 DynStrStatus copystr(const char *src, char *dest){
-  if (!src || !dest) return -INVALID_BUFF;
+  if (!src) return -INVALID_BUFF;
 
-  memcpy(dest, src, lenstr(src));
-  dest[lenstr(src)] = '\0';
+  int len = lenstr(src);
+  memcpy(dest, src, len);
+  dest[len] = '\0';
   return SUCCESS;
 }
 
@@ -171,7 +158,7 @@ DynStrStatus cmp2strs(const DynString *str1, const DynString *str2, int sensitiv
     return -STRS_NOT_EQUAL;
   }
 
-  char tmp1[str1->len], tmp2[str2->len];
+  char tmp1[str1->len+1], tmp2[str2->len+1];
   if (tolcase(str1->data, tmp1) != SUCCESS) return -CMP_FAILED;
   if (tolcase(str2->data, tmp2) != SUCCESS) return -CMP_FAILED;
 

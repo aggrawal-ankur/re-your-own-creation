@@ -16,6 +16,7 @@ typedef enum {
   REALLOC_FAILED,
   INVALID_BUFF,
   INVALID_IDX,
+  INVALID_RANGE,
   NOT_LCASE,
   NOT_UCASE,
   TOLCASE_FAILED,
@@ -37,14 +38,11 @@ typedef struct {
 // Initialize the dynamic string
 DynStrStatus init(DynString *str, size_t capacity);
 
-// Calculates the length of a string :: callee must ensure str validation
+// Calculates the length of a string (doesn't include '\0')
 size_t lenstr(const char *str);
 
-// Copy a stack buff to a dynamic string
+// Copy a buffer (stack, heap or just another dynamic string) into a dynamic string
 DynStrStatus populate(DynString *dest, const char *src);
-
-// Concatenate two dynamic strings in dest
-DynStrStatus concat2d(DynString *dest, const DynString *src);
 
 // Verify an idx against a set of bounds
 DynStrStatus boundcheck(size_t lb, size_t ub, size_t idx);
@@ -52,8 +50,8 @@ DynStrStatus boundcheck(size_t lb, size_t ub, size_t idx);
 // Returns a pointer to the dynamic string
 DynStrStatus getstr(const DynString *str, size_t idx, char **out);
 
-// Slice a dynamic string and return a pointer to the first character
-DynStrStatus getslicedstr(const DynString *str, size_t start, size_t end, DynString *outstr);
+// Slice a dynamic string
+DynStrStatus getslicedstr(const DynString *str, size_t start, size_t end, char *outstr);
 
 // Compare two dynamic strings
 DynStrStatus cmp2strs(const DynString *str1, const DynString *str2, int sensitivity);
