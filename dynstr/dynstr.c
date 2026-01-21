@@ -1,6 +1,6 @@
 #include "dynstr.h"
 
-DynStrStatus init(DynString *str, size_t capacity){
+DynStrStatus init(DynString* str, size_t capacity){
   if (str->cap != 0) return -ALREADY_INIT;
   if (capacity == 0) return -INVALID_CAP;
 
@@ -14,7 +14,7 @@ DynStrStatus init(DynString *str, size_t capacity){
   return SUCCESS;
 }
 
-DynStrStatus extendCap(DynString *str, size_t add){
+DynStrStatus extendCap(DynString* str, size_t add){
   if (!str || !str->data) return -INVALID_DPTR;
   if (str->cap >= add)  return  SUCCESS;
 
@@ -29,7 +29,7 @@ DynStrStatus extendCap(DynString *str, size_t add){
   return SUCCESS;
 }
 
-DynStrStatus populate(DynString *dest, const char *src){
+DynStrStatus populate(DynString* dest, const char* src){
   if (!dest || !dest->data) return -INVALID_DPTR;
   if (!src) return -INVALID_BUFF;
 
@@ -45,7 +45,7 @@ DynStrStatus populate(DynString *dest, const char *src){
   return SUCCESS;
 }
 
-size_t lenstr(const char *str){
+size_t lenstr(const char* str){
   if (!str) return -INVALID_BUFF;
 
   size_t len = 0;
@@ -55,7 +55,7 @@ size_t lenstr(const char *str){
 
 DynStrStatus boundcheck(size_t lb, size_t ub, size_t idx){ return (idx>= lb && idx < ub) ? SUCCESS : -INVALID_IDX; }
 
-DynStrStatus getstr(const DynString *str, size_t idx, char **out){
+DynStrStatus getstr(const DynString* str, size_t idx, char** out){
   if (!str || !str->data) return -INVALID_DPTR;
   if (boundcheck(0, str->len, idx)) return -INVALID_IDX;
 
@@ -63,7 +63,7 @@ DynStrStatus getstr(const DynString *str, size_t idx, char **out){
   return SUCCESS;
 }
 
-DynStrStatus getslicedstr(const DynString *str, size_t start, size_t end, char *outstr){
+DynStrStatus getslicedstr(const DynString* str, size_t start, size_t end, char* outstr){
   if (!str || !str->data) return -INVALID_DPTR;
   if (start >= str->len || end >= str->len) return -INVALID_RANGE;
 
@@ -74,7 +74,7 @@ DynStrStatus getslicedstr(const DynString *str, size_t start, size_t end, char *
   return SUCCESS;
 }
 
-DynStrStatus copystr(const char *src, char *dest){
+DynStrStatus copystr(const char* src, char* dest){
   if (!src) return -INVALID_BUFF;
 
   int len = lenstr(src);
@@ -93,7 +93,7 @@ char char2ucase(char c){
   return c;
 }
 
-DynStrStatus islcase(const char *str){
+DynStrStatus islcase(const char* str){
   if (!str) return -INVALID_BUFF;
 
   for (size_t i = 0; str[i] != '\0'; i++) {
@@ -103,7 +103,7 @@ DynStrStatus islcase(const char *str){
   return SUCCESS;
 }
 
-DynStrStatus isucase(const char *str){
+DynStrStatus isucase(const char* str){
   if (!str) return -INVALID_BUFF;
 
   for (size_t i = 0; str[i] != '\0'; i++) {
@@ -113,7 +113,7 @@ DynStrStatus isucase(const char *str){
   return SUCCESS;
 }
 
-DynStrStatus tolcase(const char *str, char *lcase){
+DynStrStatus tolcase(const char* str, char* lcase){
   if (!str) return -INVALID_BUFF;
 
   int res = copystr(str, lcase);
@@ -130,7 +130,7 @@ DynStrStatus tolcase(const char *str, char *lcase){
   return -TOLCASE_FAILED;
 }
 
-DynStrStatus toucase(const char *str, char *ucase){
+DynStrStatus toucase(const char* str, char* ucase){
   if (!str) return -INVALID_BUFF;
 
   int res = copystr(str, ucase);
@@ -147,7 +147,7 @@ DynStrStatus toucase(const char *str, char *ucase){
   return -TOUCASE_FAILED;
 }
 
-DynStrStatus cmp2strs(const DynString *str1, const DynString *str2, int sensitivity){
+DynStrStatus cmp2strs(const DynString* str1, const DynString* str2, int sensitivity){
   if (!str1 || !str1->data || !str2->data || !str2) return -INVALID_DPTR;
   if (str1->len != str2->len) return -STRS_NOT_EQUAL;
 
@@ -166,36 +166,38 @@ DynStrStatus cmp2strs(const DynString *str1, const DynString *str2, int sensitiv
   return -STRS_NOT_EQUAL;
 }
 
-size_t findchar(const char *str, char c, int sensitivity){
+DynStrStatus findchar(const char* str, char c, int sensitivity, int* count){
   if (!str) return -INVALID_BUFF;
-  size_t count = 0;
+  int occ = 0;
 
   // case insensitive (1)
   if (sensitivity){
     for (int i = 0; str[i] != '\0'; i++){
       if (char2lcase(str[i]) == char2lcase(c))
-        count++;
+        occ++;
     }
-  } 
+  }
   // case sensitive (0)
   else{
     for (int i = 0; str[i] != '\0'; i++)
       if (str[i] == c)
-        count++;
+        occ++;
   }
 
-  if (!count) return -1;
-  return count;
+  if (!occ) return CHAR_NOT_FOUND;
+
+  *count = occ;
+  return SUCCESS;
 }
 
-DynStrStatus exportdyntobuff(const DynString *str, char *buff){
+DynStrStatus exportdyntobuff(const DynString* str, char* buff){
   if (!str || !str->data) return -INVALID_DPTR;
 
   memcpy(buff, str->data, str->len);
   return SUCCESS;
 }
 
-DynStrStatus clearstr(DynString *str){
+DynStrStatus clearStr(DynString* str){
   if (!str || !str->data) return -INVALID_DPTR;
 
   str->len = 0;
@@ -203,7 +205,7 @@ DynStrStatus clearstr(DynString *str){
   return SUCCESS;
 }
 
-DynStrStatus freestr(DynString *str){
+DynStrStatus freeStr(DynString* str){
   if (!str || !str->data) return -INVALID_DPTR;
 
   free(str->data);
@@ -214,8 +216,8 @@ DynStrStatus freestr(DynString *str){
 
 /* Substring operations based on the KMP algorithm */
 
-int kmp_build_lps(const char *pat, size_t plen, size_t *lps){
-  if (!pat || plen == 0) return -1;
+static inline DynStrStatus kmp_build_lps(const char* pat, size_t plen, size_t *lps){
+  if (!pat || plen == 0) return -INVALID_BUFF;
 
   size_t len = 0;
   lps[0] = 0;
@@ -233,39 +235,19 @@ int kmp_build_lps(const char *pat, size_t plen, size_t *lps){
     }
   }
 
-  return 0;
+  return SUCCESS;
 }
 
-ssize_t kmp_search_one(const char *str, size_t slen, const char *pat, size_t plen){
-  if (!str || !pat) return -1;
-  if (plen==0 || slen==0 || plen > slen) return -1;
+DynStrStatus kmp_search(const char* str, const char* pat, kmp_result* kmp_obj){
+  if (!str || !pat) return -INVALID_BUFF;
+
+  size_t slen = lenstr(str);
+  size_t plen = lenstr(pat);
+  if (plen==0 || slen==0 || plen > slen) return -INVALID_BUFF;
 
   size_t lps[plen];
-  if (kmp_build_lps(pat, plen, lps) != 0) return -1;
-
-  size_t i = 0;  // main str counter
-  size_t k = 0;  // sub str  counter
-
-  while (i+plen-k <= slen){
-    if (str[i] == pat[k]){
-      i++; k++;
-      if (k == plen) return (ssize_t)(i-k);
-    }
-    else{
-      if (k != 0) k = lps[k-1];
-      else i++;
-    }
-  }
-
-  return -1;
-}
-
-int kmp_search_all(const char *str, size_t slen, const char *pat, size_t plen, size_t *indices, size_t *occ_count){
-  if (!str || !pat) return -1;
-  if (plen==0 || slen==0 || plen > slen) return -1;
-
-  size_t lps[plen];
-  if (kmp_build_lps(pat, plen, lps) != 0) return -1;
+  int res = kmp_build_lps(pat, plen, lps);
+  if (res != SUCCESS) return res;
 
   size_t i = 0;       // main str counter
   size_t k = 0;       // sub str  counter
@@ -275,7 +257,8 @@ int kmp_search_all(const char *str, size_t slen, const char *pat, size_t plen, s
     if (str[i] == pat[k]){
       i++; k++;
       if (k == plen){
-        indices[count++] = (i-k);
+        kmp_obj->indices[count] = (i-k);
+        count++;
         k = lps[plen-1];
       }
     }
@@ -285,63 +268,43 @@ int kmp_search_all(const char *str, size_t slen, const char *pat, size_t plen, s
     }
   }
 
-  if (!count) return -1;
-  *occ_count = count;
-  return 0;
-}
-
-DynStrStatus isin(const DynString *str, const char *substr, int sensitivity){
-  if (!str || !str->data) return -INVALID_DPTR;
-  if (!substr) return -INVALID_BUFF;
-
-  size_t sublen = lenstr(substr);
-
-  // sensitivity == 1 :: case insensitive
-  if (sensitivity){
-    char tmp_str[str->len+1], tmp_substr[sublen+1];
-    tolcase(str->data, tmp_str);
-    tolcase(substr, tmp_substr);
-    return (kmp_search_one(tmp_str, str->len, tmp_substr, sublen) != -1) ? SUCCESS : SUBSTR_NOT_FOUND;
+  if (!count){
+    kmp_obj->indices = NULL;
+    kmp_obj->count = 0;
+    return -SUBSTR_NOT_FOUND;
   }
 
-  // sensitivity == 0 :: case sensitive
-  return (kmp_search_one(str->data, str->len, substr, sublen) != -1) ? SUCCESS : SUBSTR_NOT_FOUND;
+  kmp_obj->count = count;
+  return SUCCESS;
 }
 
-ssize_t firstOccurrence(const DynString *str, const char *substr, int sensitivity){
-  if (!str || !str->data) return -INVALID_DPTR;
-  if (!substr) return -INVALID_BUFF;
+DynStrStatus isin(kmp_result* kmp_res){
+  if (!kmp_res) return -KMP_RES_INVALID;
+  if (kmp_res->count == 0) return -SUBSTR_NOT_FOUND;
 
-  size_t sublen = lenstr(substr);
-
-  // case insensitive (1)
-  if (sensitivity){
-    char tmp_str[str->len+1], tmp_substr[sublen+1];
-    tolcase(str->data, tmp_str);
-    tolcase(substr, tmp_substr);
-
-    return kmp_search_one(tmp_str, str->len, tmp_substr, sublen);
-  }
-
-  // case sensitive (0)
-  return kmp_search_one(str->data, str->len, substr, sublen);
+  return SUCCESS;
 }
 
-DynStrStatus allOccurrences(const DynString *str, const char *substr, size_t *indices, size_t *occ_count, int sensitivity){
-  if (!str || !str->data) return -INVALID_DPTR;
-  if (!substr) return -INVALID_BUFF;
-
-  size_t sublen = lenstr(substr);
-
-  // case insensitive (1)
-  if (sensitivity){
-    char tmp_str[str->len+1], tmp_substr[sublen+1];
-    tolcase(str->data, tmp_str);
-    tolcase(substr, tmp_substr);
-
-    return kmp_search_all(tmp_str, str->len, tmp_substr, sublen, indices, occ_count) == 0 ? SUCCESS : SUBSTR_NOT_FOUND;
+DynStrStatus firstOccurrence(kmp_result* kmp_res, int* idx){
+  if (!kmp_res) return -KMP_RES_INVALID;
+  if (kmp_res->count == 0 || kmp_res->indices == NULL){
+    *idx = -1;
+    return -SUBSTR_NOT_FOUND;
   }
 
-  // case sensitive (0)
-  return kmp_search_all(str->data, str->len, substr, sublen, indices, occ_count) == 0 ? SUCCESS : SUBSTR_NOT_FOUND;
+  *idx = kmp_res->indices[0];
+  return SUCCESS;
+}
+
+DynStrStatus allOccurrences(kmp_result* kmp_res, size_t** indices, int* count){
+  if (!kmp_res) return -KMP_RES_INVALID;
+  if (kmp_res->count == 0 || kmp_res->indices == NULL){
+    *count = -1;
+    *indices = NULL;
+    return -SUBSTR_NOT_FOUND;
+  }
+
+  *indices = kmp_res->indices;
+  *count = kmp_res->count;
+  return SUCCESS;
 }
