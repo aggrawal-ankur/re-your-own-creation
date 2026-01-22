@@ -47,7 +47,7 @@ typedef struct {
 DynStrStatus init(DynString* str, size_t capacity);
 
 // Calculates the length of a string (doesn't include '\0')
-size_t lenstr(const char* str);
+int lenstr(const char* str);
 
 // Copy a buffer (stack, heap or just another dynamic string) into a dynamic string
 DynStrStatus populate(DynString* dest, const char* src);

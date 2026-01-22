@@ -164,106 +164,21 @@ define dso_local i32 @extendCap(ptr noundef %0, i64 noundef %1) #0 {
 declare ptr @realloc(ptr noundef, i64 noundef) #2
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32 @populate(ptr noundef %0, ptr noundef %1) #0 {
-  %3 = alloca i32, align 4
-  %4 = alloca ptr, align 8
-  %5 = alloca ptr, align 8
-  %6 = alloca i64, align 8
-  %7 = alloca i32, align 4
-  store ptr %0, ptr %4, align 8
-  store ptr %1, ptr %5, align 8
-  %8 = load ptr, ptr %4, align 8
-  %9 = icmp ne ptr %8, null
-  br i1 %9, label %10, label %15
-
-10:                                               ; preds = %2
-  %11 = load ptr, ptr %4, align 8
-  %12 = getelementptr inbounds %struct.DynString, ptr %11, i32 0, i32 0
-  %13 = load ptr, ptr %12, align 8
-  %14 = icmp ne ptr %13, null
-  br i1 %14, label %16, label %15
-
-15:                                               ; preds = %10, %2
-  store i32 -4, ptr %3, align 4
-  br label %54
-
-16:                                               ; preds = %10
-  %17 = load ptr, ptr %5, align 8
-  %18 = icmp ne ptr %17, null
-  br i1 %18, label %20, label %19
-
-19:                                               ; preds = %16
-  store i32 -6, ptr %3, align 4
-  br label %54
-
-20:                                               ; preds = %16
-  %21 = load ptr, ptr %4, align 8
-  %22 = getelementptr inbounds %struct.DynString, ptr %21, i32 0, i32 1
-  %23 = load i64, ptr %22, align 8
-  %24 = load ptr, ptr %5, align 8
-  %25 = call i64 @lenstr(ptr noundef %24)
-  %26 = add i64 %23, %25
-  store i64 %26, ptr %6, align 8
-  %27 = load ptr, ptr %4, align 8
-  %28 = load i64, ptr %6, align 8
-  %29 = add i64 %28, 1
-  %30 = call i32 @extendCap(ptr noundef %27, i64 noundef %29)
-  store i32 %30, ptr %7, align 4
-  %31 = load i32, ptr %7, align 4
-  %32 = icmp ne i32 %31, 0
-  br i1 %32, label %33, label %35
-
-33:                                               ; preds = %20
-  %34 = load i32, ptr %7, align 4
-  store i32 %34, ptr %3, align 4
-  br label %54
-
-35:                                               ; preds = %20
-  %36 = load ptr, ptr %4, align 8
-  %37 = getelementptr inbounds %struct.DynString, ptr %36, i32 0, i32 0
-  %38 = load ptr, ptr %37, align 8
-  %39 = load ptr, ptr %4, align 8
-  %40 = getelementptr inbounds %struct.DynString, ptr %39, i32 0, i32 1
-  %41 = load i64, ptr %40, align 8
-  %42 = getelementptr inbounds i8, ptr %38, i64 %41
-  %43 = load ptr, ptr %5, align 8
-  %44 = load ptr, ptr %5, align 8
-  %45 = call i64 @lenstr(ptr noundef %44)
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %42, ptr align 1 %43, i64 %45, i1 false)
-  %46 = load i64, ptr %6, align 8
-  %47 = load ptr, ptr %4, align 8
-  %48 = getelementptr inbounds %struct.DynString, ptr %47, i32 0, i32 1
-  store i64 %46, ptr %48, align 8
-  %49 = load ptr, ptr %4, align 8
-  %50 = getelementptr inbounds %struct.DynString, ptr %49, i32 0, i32 0
-  %51 = load ptr, ptr %50, align 8
-  %52 = load i64, ptr %6, align 8
-  %53 = getelementptr inbounds i8, ptr %51, i64 %52
-  store i8 0, ptr %53, align 1
-  store i32 0, ptr %3, align 4
-  br label %54
-
-54:                                               ; preds = %35, %33, %19, %15
-  %55 = load i32, ptr %3, align 4
-  ret i32 %55
-}
-
-; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i64 @lenstr(ptr noundef %0) #0 {
-  %2 = alloca i64, align 8
+define dso_local i32 @lenstr(ptr noundef %0) #0 {
+  %2 = alloca i32, align 4
   %3 = alloca ptr, align 8
-  %4 = alloca i64, align 8
+  %4 = alloca i32, align 4
   store ptr %0, ptr %3, align 8
   %5 = load ptr, ptr %3, align 8
   %6 = icmp ne ptr %5, null
   br i1 %6, label %8, label %7
 
 7:                                                ; preds = %1
-  store i64 -6, ptr %2, align 8
+  store i32 -1, ptr %2, align 4
   br label %20
 
 8:                                                ; preds = %1
-  store i64 0, ptr %4, align 8
+  store i32 0, ptr %4, align 4
   br label %9
 
 9:                                                ; preds = %15, %8
@@ -276,19 +191,117 @@ define dso_local i64 @lenstr(ptr noundef %0) #0 {
   br i1 %14, label %15, label %18
 
 15:                                               ; preds = %9
-  %16 = load i64, ptr %4, align 8
-  %17 = add i64 %16, 1
-  store i64 %17, ptr %4, align 8
+  %16 = load i32, ptr %4, align 4
+  %17 = add nsw i32 %16, 1
+  store i32 %17, ptr %4, align 4
   br label %9, !llvm.loop !8
 
 18:                                               ; preds = %9
-  %19 = load i64, ptr %4, align 8
-  store i64 %19, ptr %2, align 8
+  %19 = load i32, ptr %4, align 4
+  store i32 %19, ptr %2, align 4
   br label %20
 
 20:                                               ; preds = %18, %7
-  %21 = load i64, ptr %2, align 8
-  ret i64 %21
+  %21 = load i32, ptr %2, align 4
+  ret i32 %21
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local i32 @populate(ptr noundef %0, ptr noundef %1) #0 {
+  %3 = alloca i32, align 4
+  %4 = alloca ptr, align 8
+  %5 = alloca ptr, align 8
+  %6 = alloca i32, align 4
+  %7 = alloca i64, align 8
+  %8 = alloca i32, align 4
+  store ptr %0, ptr %4, align 8
+  store ptr %1, ptr %5, align 8
+  %9 = load ptr, ptr %4, align 8
+  %10 = icmp ne ptr %9, null
+  br i1 %10, label %11, label %16
+
+11:                                               ; preds = %2
+  %12 = load ptr, ptr %4, align 8
+  %13 = getelementptr inbounds %struct.DynString, ptr %12, i32 0, i32 0
+  %14 = load ptr, ptr %13, align 8
+  %15 = icmp ne ptr %14, null
+  br i1 %15, label %17, label %16
+
+16:                                               ; preds = %11, %2
+  store i32 -4, ptr %3, align 4
+  br label %61
+
+17:                                               ; preds = %11
+  %18 = load ptr, ptr %5, align 8
+  %19 = icmp ne ptr %18, null
+  br i1 %19, label %21, label %20
+
+20:                                               ; preds = %17
+  store i32 -6, ptr %3, align 4
+  br label %61
+
+21:                                               ; preds = %17
+  %22 = load ptr, ptr %5, align 8
+  %23 = call i32 @lenstr(ptr noundef %22)
+  store i32 %23, ptr %6, align 4
+  %24 = load i32, ptr %6, align 4
+  %25 = icmp eq i32 %24, -1
+  br i1 %25, label %26, label %27
+
+26:                                               ; preds = %21
+  store i32 -6, ptr %3, align 4
+  br label %61
+
+27:                                               ; preds = %21
+  %28 = load ptr, ptr %4, align 8
+  %29 = getelementptr inbounds %struct.DynString, ptr %28, i32 0, i32 1
+  %30 = load i64, ptr %29, align 8
+  %31 = load i32, ptr %6, align 4
+  %32 = sext i32 %31 to i64
+  %33 = add i64 %30, %32
+  store i64 %33, ptr %7, align 8
+  %34 = load ptr, ptr %4, align 8
+  %35 = load i64, ptr %7, align 8
+  %36 = add i64 %35, 1
+  %37 = call i32 @extendCap(ptr noundef %34, i64 noundef %36)
+  store i32 %37, ptr %8, align 4
+  %38 = load i32, ptr %8, align 4
+  %39 = icmp ne i32 %38, 0
+  br i1 %39, label %40, label %42
+
+40:                                               ; preds = %27
+  %41 = load i32, ptr %8, align 4
+  store i32 %41, ptr %3, align 4
+  br label %61
+
+42:                                               ; preds = %27
+  %43 = load ptr, ptr %4, align 8
+  %44 = getelementptr inbounds %struct.DynString, ptr %43, i32 0, i32 0
+  %45 = load ptr, ptr %44, align 8
+  %46 = load ptr, ptr %4, align 8
+  %47 = getelementptr inbounds %struct.DynString, ptr %46, i32 0, i32 1
+  %48 = load i64, ptr %47, align 8
+  %49 = getelementptr inbounds i8, ptr %45, i64 %48
+  %50 = load ptr, ptr %5, align 8
+  %51 = load i32, ptr %6, align 4
+  %52 = sext i32 %51 to i64
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %49, ptr align 1 %50, i64 %52, i1 false)
+  %53 = load i64, ptr %7, align 8
+  %54 = load ptr, ptr %4, align 8
+  %55 = getelementptr inbounds %struct.DynString, ptr %54, i32 0, i32 1
+  store i64 %53, ptr %55, align 8
+  %56 = load ptr, ptr %4, align 8
+  %57 = getelementptr inbounds %struct.DynString, ptr %56, i32 0, i32 0
+  %58 = load ptr, ptr %57, align 8
+  %59 = load i64, ptr %7, align 8
+  %60 = getelementptr inbounds i8, ptr %58, i64 %59
+  store i8 0, ptr %60, align 1
+  store i32 0, ptr %3, align 4
+  br label %61
+
+61:                                               ; preds = %42, %40, %26, %20, %16
+  %62 = load i32, ptr %3, align 4
+  ret i32 %62
 }
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
@@ -459,29 +472,37 @@ define dso_local i32 @copystr(ptr noundef %0, ptr noundef %1) #0 {
 
 9:                                                ; preds = %2
   store i32 -6, ptr %3, align 4
-  br label %22
+  br label %25
 
 10:                                               ; preds = %2
   %11 = load ptr, ptr %4, align 8
-  %12 = call i64 @lenstr(ptr noundef %11)
-  %13 = trunc i64 %12 to i32
-  store i32 %13, ptr %6, align 4
-  %14 = load ptr, ptr %5, align 8
-  %15 = load ptr, ptr %4, align 8
-  %16 = load i32, ptr %6, align 4
-  %17 = sext i32 %16 to i64
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %14, ptr align 1 %15, i64 %17, i1 false)
-  %18 = load ptr, ptr %5, align 8
+  %12 = call i32 @lenstr(ptr noundef %11)
+  store i32 %12, ptr %6, align 4
+  %13 = load i32, ptr %6, align 4
+  %14 = icmp eq i32 %13, -1
+  br i1 %14, label %15, label %16
+
+15:                                               ; preds = %10
+  store i32 6, ptr %3, align 4
+  br label %25
+
+16:                                               ; preds = %10
+  %17 = load ptr, ptr %5, align 8
+  %18 = load ptr, ptr %4, align 8
   %19 = load i32, ptr %6, align 4
   %20 = sext i32 %19 to i64
-  %21 = getelementptr inbounds i8, ptr %18, i64 %20
-  store i8 0, ptr %21, align 1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %17, ptr align 1 %18, i64 %20, i1 false)
+  %21 = load ptr, ptr %5, align 8
+  %22 = load i32, ptr %6, align 4
+  %23 = sext i32 %22 to i64
+  %24 = getelementptr inbounds i8, ptr %21, i64 %23
+  store i8 0, ptr %24, align 1
   store i32 0, ptr %3, align 4
-  br label %22
+  br label %25
 
-22:                                               ; preds = %10, %9
-  %23 = load i32, ptr %3, align 4
-  ret i32 %23
+25:                                               ; preds = %16, %15, %9
+  %26 = load i32, ptr %3, align 4
+  ret i32 %26
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
@@ -1292,8 +1313,8 @@ define dso_local i32 @kmp_search(ptr noundef %0, ptr noundef %1, ptr noundef %2)
   %5 = alloca ptr, align 8
   %6 = alloca ptr, align 8
   %7 = alloca ptr, align 8
-  %8 = alloca i64, align 8
-  %9 = alloca i64, align 8
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
   %10 = alloca ptr, align 8
   %11 = alloca i64, align 8
   %12 = alloca i32, align 4
@@ -1315,173 +1336,178 @@ define dso_local i32 @kmp_search(ptr noundef %0, ptr noundef %1, ptr noundef %2)
 
 22:                                               ; preds = %19, %3
   store i32 -6, ptr %4, align 4
-  br label %117
+  br label %122
 
 23:                                               ; preds = %19
   %24 = load ptr, ptr %5, align 8
-  %25 = call i64 @lenstr(ptr noundef %24)
-  store i64 %25, ptr %8, align 8
+  %25 = call i32 @lenstr(ptr noundef %24)
+  store i32 %25, ptr %8, align 4
   %26 = load ptr, ptr %6, align 8
-  %27 = call i64 @lenstr(ptr noundef %26)
-  store i64 %27, ptr %9, align 8
-  %28 = load i64, ptr %9, align 8
-  %29 = icmp eq i64 %28, 0
+  %27 = call i32 @lenstr(ptr noundef %26)
+  store i32 %27, ptr %9, align 4
+  %28 = load i32, ptr %9, align 4
+  %29 = icmp eq i32 %28, -1
   br i1 %29, label %37, label %30
 
 30:                                               ; preds = %23
-  %31 = load i64, ptr %8, align 8
-  %32 = icmp eq i64 %31, 0
+  %31 = load i32, ptr %8, align 4
+  %32 = icmp eq i32 %31, -1
   br i1 %32, label %37, label %33
 
 33:                                               ; preds = %30
-  %34 = load i64, ptr %9, align 8
-  %35 = load i64, ptr %8, align 8
-  %36 = icmp ugt i64 %34, %35
+  %34 = load i32, ptr %9, align 4
+  %35 = load i32, ptr %8, align 4
+  %36 = icmp sgt i32 %34, %35
   br i1 %36, label %37, label %38
 
 37:                                               ; preds = %33, %30, %23
   store i32 -6, ptr %4, align 4
-  br label %117
+  br label %122
 
 38:                                               ; preds = %33
-  %39 = load i64, ptr %9, align 8
-  %40 = call ptr @llvm.stacksave.p0()
-  store ptr %40, ptr %10, align 8
-  %41 = alloca i64, i64 %39, align 16
-  store i64 %39, ptr %11, align 8
-  %42 = load ptr, ptr %6, align 8
-  %43 = load i64, ptr %9, align 8
-  %44 = call i32 @kmp_build_lps(ptr noundef %42, i64 noundef %43, ptr noundef %41)
-  store i32 %44, ptr %12, align 4
-  %45 = load i32, ptr %12, align 4
-  %46 = icmp ne i32 %45, 0
-  br i1 %46, label %47, label %49
-
-47:                                               ; preds = %38
-  %48 = load i32, ptr %12, align 4
-  store i32 %48, ptr %4, align 4
-  store i32 1, ptr %13, align 4
-  br label %115
+  %39 = load i32, ptr %9, align 4
+  %40 = zext i32 %39 to i64
+  %41 = call ptr @llvm.stacksave.p0()
+  store ptr %41, ptr %10, align 8
+  %42 = alloca i64, i64 %40, align 16
+  store i64 %40, ptr %11, align 8
+  %43 = load ptr, ptr %6, align 8
+  %44 = load i32, ptr %9, align 4
+  %45 = sext i32 %44 to i64
+  %46 = call i32 @kmp_build_lps(ptr noundef %43, i64 noundef %45, ptr noundef %42)
+  store i32 %46, ptr %12, align 4
+  %47 = load i32, ptr %12, align 4
+  %48 = icmp ne i32 %47, 0
+  br i1 %48, label %49, label %51
 
 49:                                               ; preds = %38
+  %50 = load i32, ptr %12, align 4
+  store i32 %50, ptr %4, align 4
+  store i32 1, ptr %13, align 4
+  br label %120
+
+51:                                               ; preds = %38
   store i64 0, ptr %14, align 8
   store i64 0, ptr %15, align 8
   store i64 0, ptr %16, align 8
-  br label %50
+  br label %52
 
-50:                                               ; preds = %102, %49
-  %51 = load i64, ptr %14, align 8
-  %52 = load i64, ptr %8, align 8
-  %53 = icmp ult i64 %51, %52
-  br i1 %53, label %54, label %103
+52:                                               ; preds = %107, %51
+  %53 = load i64, ptr %14, align 8
+  %54 = load i32, ptr %8, align 4
+  %55 = sext i32 %54 to i64
+  %56 = icmp ult i64 %53, %55
+  br i1 %56, label %57, label %108
 
-54:                                               ; preds = %50
-  %55 = load ptr, ptr %5, align 8
-  %56 = load i64, ptr %14, align 8
-  %57 = getelementptr inbounds i8, ptr %55, i64 %56
-  %58 = load i8, ptr %57, align 1
-  %59 = sext i8 %58 to i32
-  %60 = load ptr, ptr %6, align 8
-  %61 = load i64, ptr %15, align 8
-  %62 = getelementptr inbounds i8, ptr %60, i64 %61
-  %63 = load i8, ptr %62, align 1
-  %64 = sext i8 %63 to i32
-  %65 = icmp eq i32 %59, %64
-  br i1 %65, label %66, label %90
+57:                                               ; preds = %52
+  %58 = load ptr, ptr %5, align 8
+  %59 = load i64, ptr %14, align 8
+  %60 = getelementptr inbounds i8, ptr %58, i64 %59
+  %61 = load i8, ptr %60, align 1
+  %62 = sext i8 %61 to i32
+  %63 = load ptr, ptr %6, align 8
+  %64 = load i64, ptr %15, align 8
+  %65 = getelementptr inbounds i8, ptr %63, i64 %64
+  %66 = load i8, ptr %65, align 1
+  %67 = sext i8 %66 to i32
+  %68 = icmp eq i32 %62, %67
+  br i1 %68, label %69, label %95
 
-66:                                               ; preds = %54
-  %67 = load i64, ptr %14, align 8
-  %68 = add i64 %67, 1
-  store i64 %68, ptr %14, align 8
-  %69 = load i64, ptr %15, align 8
-  %70 = add i64 %69, 1
-  store i64 %70, ptr %15, align 8
-  %71 = load i64, ptr %15, align 8
-  %72 = load i64, ptr %9, align 8
-  %73 = icmp eq i64 %71, %72
-  br i1 %73, label %74, label %89
+69:                                               ; preds = %57
+  %70 = load i64, ptr %14, align 8
+  %71 = add i64 %70, 1
+  store i64 %71, ptr %14, align 8
+  %72 = load i64, ptr %15, align 8
+  %73 = add i64 %72, 1
+  store i64 %73, ptr %15, align 8
+  %74 = load i64, ptr %15, align 8
+  %75 = load i32, ptr %9, align 4
+  %76 = sext i32 %75 to i64
+  %77 = icmp eq i64 %74, %76
+  br i1 %77, label %78, label %94
 
-74:                                               ; preds = %66
-  %75 = load i64, ptr %14, align 8
-  %76 = load i64, ptr %15, align 8
-  %77 = sub i64 %75, %76
-  %78 = load ptr, ptr %7, align 8
-  %79 = getelementptr inbounds %struct.kmp_result, ptr %78, i32 0, i32 1
-  %80 = load ptr, ptr %79, align 8
-  %81 = load i64, ptr %16, align 8
-  %82 = getelementptr inbounds i64, ptr %80, i64 %81
-  store i64 %77, ptr %82, align 8
-  %83 = load i64, ptr %16, align 8
-  %84 = add i64 %83, 1
-  store i64 %84, ptr %16, align 8
-  %85 = load i64, ptr %9, align 8
-  %86 = sub i64 %85, 1
-  %87 = getelementptr inbounds i64, ptr %41, i64 %86
-  %88 = load i64, ptr %87, align 8
-  store i64 %88, ptr %15, align 8
-  br label %89
+78:                                               ; preds = %69
+  %79 = load i64, ptr %14, align 8
+  %80 = load i64, ptr %15, align 8
+  %81 = sub i64 %79, %80
+  %82 = load ptr, ptr %7, align 8
+  %83 = getelementptr inbounds %struct.kmp_result, ptr %82, i32 0, i32 1
+  %84 = load ptr, ptr %83, align 8
+  %85 = load i64, ptr %16, align 8
+  %86 = getelementptr inbounds i64, ptr %84, i64 %85
+  store i64 %81, ptr %86, align 8
+  %87 = load i64, ptr %16, align 8
+  %88 = add i64 %87, 1
+  store i64 %88, ptr %16, align 8
+  %89 = load i32, ptr %9, align 4
+  %90 = sub nsw i32 %89, 1
+  %91 = sext i32 %90 to i64
+  %92 = getelementptr inbounds i64, ptr %42, i64 %91
+  %93 = load i64, ptr %92, align 8
+  store i64 %93, ptr %15, align 8
+  br label %94
 
-89:                                               ; preds = %74, %66
-  br label %102
+94:                                               ; preds = %78, %69
+  br label %107
 
-90:                                               ; preds = %54
-  %91 = load i64, ptr %15, align 8
-  %92 = icmp ne i64 %91, 0
-  br i1 %92, label %93, label %98
+95:                                               ; preds = %57
+  %96 = load i64, ptr %15, align 8
+  %97 = icmp ne i64 %96, 0
+  br i1 %97, label %98, label %103
 
-93:                                               ; preds = %90
-  %94 = load i64, ptr %15, align 8
-  %95 = sub i64 %94, 1
-  %96 = getelementptr inbounds i64, ptr %41, i64 %95
-  %97 = load i64, ptr %96, align 8
-  store i64 %97, ptr %15, align 8
-  br label %101
+98:                                               ; preds = %95
+  %99 = load i64, ptr %15, align 8
+  %100 = sub i64 %99, 1
+  %101 = getelementptr inbounds i64, ptr %42, i64 %100
+  %102 = load i64, ptr %101, align 8
+  store i64 %102, ptr %15, align 8
+  br label %106
 
-98:                                               ; preds = %90
-  %99 = load i64, ptr %14, align 8
-  %100 = add i64 %99, 1
-  store i64 %100, ptr %14, align 8
-  br label %101
+103:                                              ; preds = %95
+  %104 = load i64, ptr %14, align 8
+  %105 = add i64 %104, 1
+  store i64 %105, ptr %14, align 8
+  br label %106
 
-101:                                              ; preds = %98, %93
-  br label %102
+106:                                              ; preds = %103, %98
+  br label %107
 
-102:                                              ; preds = %101, %89
-  br label %50, !llvm.loop !15
+107:                                              ; preds = %106, %94
+  br label %52, !llvm.loop !15
 
-103:                                              ; preds = %50
-  %104 = load i64, ptr %16, align 8
-  %105 = icmp ne i64 %104, 0
-  br i1 %105, label %111, label %106
+108:                                              ; preds = %52
+  %109 = load i64, ptr %16, align 8
+  %110 = icmp ne i64 %109, 0
+  br i1 %110, label %116, label %111
 
-106:                                              ; preds = %103
-  %107 = load ptr, ptr %7, align 8
-  %108 = getelementptr inbounds %struct.kmp_result, ptr %107, i32 0, i32 1
-  store ptr null, ptr %108, align 8
-  %109 = load ptr, ptr %7, align 8
-  %110 = getelementptr inbounds %struct.kmp_result, ptr %109, i32 0, i32 0
-  store i64 0, ptr %110, align 8
+111:                                              ; preds = %108
+  %112 = load ptr, ptr %7, align 8
+  %113 = getelementptr inbounds %struct.kmp_result, ptr %112, i32 0, i32 1
+  store ptr null, ptr %113, align 8
+  %114 = load ptr, ptr %7, align 8
+  %115 = getelementptr inbounds %struct.kmp_result, ptr %114, i32 0, i32 0
+  store i64 0, ptr %115, align 8
   store i32 -16, ptr %4, align 4
   store i32 1, ptr %13, align 4
-  br label %115
+  br label %120
 
-111:                                              ; preds = %103
-  %112 = load i64, ptr %16, align 8
-  %113 = load ptr, ptr %7, align 8
-  %114 = getelementptr inbounds %struct.kmp_result, ptr %113, i32 0, i32 0
-  store i64 %112, ptr %114, align 8
+116:                                              ; preds = %108
+  %117 = load i64, ptr %16, align 8
+  %118 = load ptr, ptr %7, align 8
+  %119 = getelementptr inbounds %struct.kmp_result, ptr %118, i32 0, i32 0
+  store i64 %117, ptr %119, align 8
   store i32 0, ptr %4, align 4
   store i32 1, ptr %13, align 4
-  br label %115
+  br label %120
 
-115:                                              ; preds = %111, %106, %47
-  %116 = load ptr, ptr %10, align 8
-  call void @llvm.stackrestore.p0(ptr %116)
-  br label %117
+120:                                              ; preds = %116, %111, %49
+  %121 = load ptr, ptr %10, align 8
+  call void @llvm.stackrestore.p0(ptr %121)
+  br label %122
 
-117:                                              ; preds = %115, %37, %22
-  %118 = load i32, ptr %4, align 4
-  ret i32 %118
+122:                                              ; preds = %120, %37, %22
+  %123 = load i32, ptr %4, align 4
+  ret i32 %123
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable

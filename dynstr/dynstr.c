@@ -16,7 +16,7 @@ DynStrStatus init(DynString* str, size_t capacity){
 
 DynStrStatus extendCap(DynString* str, size_t add){
   if (!str || !str->data) return -INVALID_DPTR;
-  if (str->cap >= add)  return  SUCCESS;
+  if (str->cap >= add) return SUCCESS;
 
   size_t ncap = str->cap;
   while (ncap < add+1) ncap *= 2;
@@ -29,28 +29,31 @@ DynStrStatus extendCap(DynString* str, size_t add){
   return SUCCESS;
 }
 
+int lenstr(const char* str){
+  if (!str) return -1;
+
+  int len = 0;
+  while (*(str++) != '\0') len++;
+  return len;
+}
+
 DynStrStatus populate(DynString* dest, const char* src){
   if (!dest || !dest->data) return -INVALID_DPTR;
   if (!src) return -INVALID_BUFF;
 
-  size_t nlen = dest->len + lenstr(src);
+  int srclen = lenstr(src);
+  if (srclen == -1) return -INVALID_BUFF;
+
+  size_t nlen = dest->len + srclen;
 
   int res = extendCap(dest, nlen+1);
   if (res != SUCCESS) return res;
 
-  memcpy(dest->data+dest->len, src, lenstr(src));
+  memcpy(dest->data+dest->len, src, srclen);
   dest->len = nlen;
   dest->data[nlen] = '\0';
 
   return SUCCESS;
-}
-
-size_t lenstr(const char* str){
-  if (!str) return -INVALID_BUFF;
-
-  size_t len = 0;
-  while (*(str++) != '\0') len++;
-  return len;
 }
 
 DynStrStatus boundcheck(size_t lb, size_t ub, size_t idx){ return (idx>= lb && idx < ub) ? SUCCESS : -INVALID_IDX; }
@@ -78,6 +81,8 @@ DynStrStatus copystr(const char* src, char* dest){
   if (!src) return -INVALID_BUFF;
 
   int len = lenstr(src);
+  if (len == -1) return INVALID_BUFF;
+
   memcpy(dest, src, len);
   dest[len] = '\0';
   return SUCCESS;
@@ -241,9 +246,9 @@ static inline DynStrStatus kmp_build_lps(const char* pat, size_t plen, size_t *l
 DynStrStatus kmp_search(const char* str, const char* pat, kmp_result* kmp_obj){
   if (!str || !pat) return -INVALID_BUFF;
 
-  size_t slen = lenstr(str);
-  size_t plen = lenstr(pat);
-  if (plen==0 || slen==0 || plen > slen) return -INVALID_BUFF;
+  int slen = lenstr(str);
+  int plen = lenstr(pat);
+  if (plen == -1 || slen == -1 || plen > slen) return -INVALID_BUFF;
 
   size_t lps[plen];
   int res = kmp_build_lps(pat, plen, lps);
