@@ -119,14 +119,14 @@ define dso_local range(i32 -6, 1) i32 @populate(ptr noundef %0, ptr noundef read
 
 9:              ; lenstr inlined                  ; preds = %7
   %10 = load i8, ptr %1, align 1, !tbaa !13
-  %11 = icmp eq i8 %10, 0
+  %11 = icmp eq i8 %10, 0       ; src[0] == '\0'
   br i1 %11, label %21, label %12
 
 12:                                               ; preds = %9, %12
   %13 = phi i32 [ %16, %12 ], [ 0, %9 ]     ; len=0
   %14 = phi ptr [ %15, %12 ], [ %1, %9 ]    ; ptr=&src[0]
   %15 = getelementptr inbounds i8, ptr %14, i64 1   ; ptr=&src[1]
-  %16 = add nuw nsw i32 %13, 1      ; len++
+  %16 = add nuw nsw i32 %13, 1      ; len++   (len is incremented before condition check because it started from block9 and the condition was checked there)
   %17 = load i8, ptr %15, align 1, !tbaa !13    ; src[1]
   %18 = icmp eq i8 %17, 0       ; src[1] == '\0'
   br i1 %18, label %19, label %12, !llvm.loop !17
@@ -139,7 +139,7 @@ define dso_local range(i32 -6, 1) i32 @populate(ptr noundef %0, ptr noundef read
   %22 = phi i64 [ 0, %9 ], [ %20, %19 ]     ; WHY THIS
   %23 = getelementptr inbounds i8, ptr %0, i64 8
   %24 = load i64, ptr %23, align 8, !tbaa !12     ; dest.len
-  %25 = add i64 %24, %22     ; add(lenstr(src), dest.len)==nlen
+  %25 = add i64 %24, %22     ; add(dest.len, lenstr(src))==nlen
   %26 = add i64 %25, 1       ; nlen+1
   %27 = getelementptr inbounds i8, ptr %0, i64 16
   %28 = load i64, ptr %27, align 8, !tbaa !5      ; dest.cap
@@ -147,7 +147,7 @@ define dso_local range(i32 -6, 1) i32 @populate(ptr noundef %0, ptr noundef read
   br i1 %29, label %30, label %40
 
 30:                                               ; preds = %21
-  %31 = add i64 %25, 2     ; add(lenstr(src), dest.len)==nlen+1+1 (I am not sure why not nlen+1 was reused)
+  %31 = add i64 %25, 2     ; add(dest.len, lenstr(src))==nlen+1+1 (Why was nlen+1 not reused)
   br label %32
 
 32:             ; extend inlined                  ; preds = %32, %30
@@ -201,22 +201,22 @@ define dso_local noundef range(i32 -7, 1) i32 @boundcheck(i64 noundef %0, i64 no
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 define dso_local range(i32 -7, 1) i32 @getstr(ptr noundef readonly %0, i64 noundef %1, ptr nocapture noundef writeonly %2) local_unnamed_addr #7 {
-  %4 = icmp eq ptr %0, null
+  %4 = icmp eq ptr %0, null       ; !str
   br i1 %4, label %14, label %5
 
 5:                                                ; preds = %3
   %6 = load ptr, ptr %0, align 8, !tbaa !11
-  %7 = icmp eq ptr %6, null
+  %7 = icmp eq ptr %6, null       ; !str.data
   br i1 %7, label %14, label %8
 
 8:                                                ; preds = %5
   %9 = getelementptr inbounds i8, ptr %0, i64 8
   %10 = load i64, ptr %9, align 8, !tbaa !12
-  %11 = icmp ugt i64 %10, %1
+  %11 = icmp ugt i64 %10, %1        ; boundcheck inlined
   br i1 %11, label %12, label %14
 
 12:                                               ; preds = %8
-  %13 = getelementptr inbounds i8, ptr %6, i64 %1
+  %13 = getelementptr inbounds i8, ptr %6, i64 %1       ; &str.data[%1]
   store ptr %13, ptr %2, align 8, !tbaa !18
   br label %14
 
@@ -227,28 +227,28 @@ define dso_local range(i32 -7, 1) i32 @getstr(ptr noundef readonly %0, i64 nound
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none) uwtable
 define dso_local range(i32 -8, 1) i32 @getslicedstr(ptr noundef readonly %0, i64 noundef %1, i64 noundef %2, ptr nocapture noundef writeonly %3) local_unnamed_addr #8 {
-  %5 = icmp eq ptr %0, null
+  %5 = icmp eq ptr %0, null       ; !str
   br i1 %5, label %19, label %6
 
 6:                                                ; preds = %4
   %7 = load ptr, ptr %0, align 8, !tbaa !11
-  %8 = icmp eq ptr %7, null
+  %8 = icmp eq ptr %7, null       ; !str.data
   br i1 %8, label %19, label %9
 
 9:                                                ; preds = %6
-  %10 = getelementptr inbounds i8, ptr %0, i64 8
-  %11 = load i64, ptr %10, align 8, !tbaa !12
-  %12 = icmp ugt i64 %11, %1
-  %13 = icmp ugt i64 %11, %2
+  %10 = getelementptr inbounds i8, ptr %0, i64 8      ; &str.len
+  %11 = load i64, ptr %10, align 8, !tbaa !12         ; str.len
+  %12 = icmp ugt i64 %11, %1        ; str.len > start
+  %13 = icmp ugt i64 %11, %2        ; str.len > end
   %14 = and i1 %12, %13
   br i1 %14, label %15, label %19
 
 15:                                               ; preds = %9
-  %16 = sub i64 %2, %1
+  %16 = sub i64 %2, %1        ; end-start
   %17 = getelementptr inbounds i8, ptr %7, i64 %1
   tail call void @llvm.memcpy.p0.p0.i64(ptr align 1 %3, ptr nonnull align 1 %17, i64 %16, i1 false)
-  %18 = getelementptr inbounds i8, ptr %3, i64 %16
-  store i8 0, ptr %18, align 1, !tbaa !13
+  %18 = getelementptr inbounds i8, ptr %3, i64 %16    ; out[end-start]
+  store i8 0, ptr %18, align 1, !tbaa !13             ; out[end-start]='\0'
   br label %19
 
 19:                                               ; preds = %9, %4, %6, %15
@@ -258,32 +258,32 @@ define dso_local range(i32 -8, 1) i32 @getslicedstr(ptr noundef readonly %0, i64
 
 ; Function Attrs: nofree norecurse nosync nounwind memory(read, argmem: readwrite, inaccessiblemem: none) uwtable
 define dso_local range(i32 -6, 7) i32 @copystr(ptr noundef readonly %0, ptr nocapture noundef writeonly %1) local_unnamed_addr #9 {
-  %3 = icmp eq ptr %0, null
+  %3 = icmp eq ptr %0, null       ; !src
   br i1 %3, label %19, label %4
 
 4:                                                ; preds = %2
   %5 = load i8, ptr %0, align 1, !tbaa !13
-  %6 = icmp eq i8 %5, 0
+  %6 = icmp eq i8 %5, 0         ; !src[0] == '\0'
   br i1 %6, label %16, label %7
 
-7:                                                ; preds = %4, %7
-  %8 = phi i32 [ %11, %7 ], [ 0, %4 ]
-  %9 = phi ptr [ %10, %7 ], [ %0, %4 ]
-  %10 = getelementptr inbounds i8, ptr %9, i64 1
-  %11 = add nuw nsw i32 %8, 1
+7:            ; lenstr inlined                    ; preds = %4, %7
+  %8 = phi i32 [ %11, %7 ], [ 0, %4 ]       ;   len=0 (init)
+  %9 = phi ptr [ %10, %7 ], [ %0, %4 ]      ;   ptr=src
+  %10 = getelementptr inbounds i8, ptr %9, i64 1    ; &src[1]
+  %11 = add nuw nsw i32 %8, 1       ; len++
   %12 = load i8, ptr %10, align 1, !tbaa !13
-  %13 = icmp eq i8 %12, 0
+  %13 = icmp eq i8 %12, 0       ; src[1] == '\0'
   br i1 %13, label %14, label %7, !llvm.loop !17
 
 14:                                               ; preds = %7
-  %15 = zext nneg i32 %11 to i64
+  %15 = zext nneg i32 %11 to i64      ; zero-extend the computed length
   br label %16
 
 16:                                               ; preds = %14, %4
   %17 = phi i64 [ 0, %4 ], [ %15, %14 ]
   tail call void @llvm.memcpy.p0.p0.i64(ptr align 1 %1, ptr nonnull align 1 %0, i64 %17, i1 false)
   %18 = getelementptr inbounds i8, ptr %1, i64 %17
-  store i8 0, ptr %18, align 1, !tbaa !13
+  store i8 0, ptr %18, align 1, !tbaa !13       ; dest[len]='\0'
   br label %19
 
 19:                                               ; preds = %16, %2
