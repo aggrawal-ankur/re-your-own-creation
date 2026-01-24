@@ -440,277 +440,274 @@ define dso_local noundef i32 @tolcase(ptr noundef readonly %0, ptr nocapture nou
 
 ; Function Attrs: nofree norecurse nosync nounwind memory(readwrite, inaccessiblemem: none) uwtable
 define dso_local noundef i32 @toucase(ptr noundef readonly %0, ptr nocapture noundef %1) local_unnamed_addr #11 {
-  %3 = icmp eq ptr %0, null
+  %3 = icmp eq ptr %0, null       ; !str
   br i1 %3, label %49, label %4
 
 4:                                                ; preds = %2
-  %5 = load i8, ptr %0, align 1, !tbaa !13
-  %6 = icmp eq i8 %5, 0
+  %5 = load i8, ptr %0, align 1, !tbaa !13    ; str[0]
+  %6 = icmp eq i8 %5, 0   ; str[0] == '\0'
   br i1 %6, label %16, label %7
 
-7:                                                ; preds = %4, %7
-  %8 = phi i32 [ %11, %7 ], [ 0, %4 ]
-  %9 = phi ptr [ %10, %7 ], [ %0, %4 ]
-  %10 = getelementptr inbounds i8, ptr %9, i64 1
-  %11 = add nuw nsw i32 %8, 1
+7:              ; lenstr inlined                  ; preds = %4, %7
+  %8 = phi i32 [ %11, %7 ], [ 0, %4 ]     ; len=0 (init val)
+  %9 = phi ptr [ %10, %7 ], [ %0, %4 ]    ; ptr=str[0] (init val)
+  %10 = getelementptr inbounds i8, ptr %9, i64 1    ; str[..+1]
+  %11 = add nuw nsw i32 %8, 1    ; len++
   %12 = load i8, ptr %10, align 1, !tbaa !13
-  %13 = icmp eq i8 %12, 0
+  %13 = icmp eq i8 %12, 0   ; str[.] == '\0'
   br i1 %13, label %14, label %7, !llvm.loop !17
 
 14:                                               ; preds = %7
-  %15 = zext nneg i32 %11 to i64
+  %15 = zext nneg i32 %11 to i64      ; zero-extend len to i64
   br label %16
 
-16:                                               ; preds = %14, %4
-  %17 = phi i64 [ 0, %4 ], [ %15, %14 ]
+16:              ; copystr inlined                ; preds = %14, %4
+  %17 = phi i64 [ 0, %4 ], [ %15, %14 ]     ; computed len
   tail call void @llvm.memcpy.p0.p0.i64(ptr align 1 %1, ptr nonnull readonly align 1 %0, i64 %17, i1 false)
-  %18 = getelementptr inbounds i8, ptr %1, i64 %17
-  store i8 0, ptr %18, align 1, !tbaa !13
-  %19 = load i8, ptr %1, align 1, !tbaa !13
-  %20 = icmp eq i8 %19, 0
-  br i1 %20, label %35, label %21
+  %18 = getelementptr inbounds i8, ptr %1, i64 %17    ; &ucase[len]  (the end of ucase)
+  store i8 0, ptr %18, align 1, !tbaa !13       ; ucase[len] = '\0'
+  %19 = load i8, ptr %1, align 1, !tbaa !13   ; ucase[0]
+  %20 = icmp eq i8 %19, 0     ; ucase[0] = '\0'
+  br i1 %20, label %33, label %21
 
-21:                                               ; preds = %16, %21
-  %22 = phi i64 [ %29, %21 ], [ 0, %16 ]
-  %23 = phi i8 [ %31, %21 ], [ %19, %16 ]
-  %24 = getelementptr inbounds i8, ptr %1, i64 %22
-  %25 = add i8 %23, -97
-  %26 = icmp ult i8 %25, 26
-  %27 = and i8 %23, 95
-  %28 = select i1 %26, i8 %27, i8 %23
-  store i8 %28, ptr %24, align 1, !tbaa !13
-  %29 = add nuw nsw i64 %22, 1
-  %30 = getelementptr inbounds i8, ptr %1, i64 %29
-  %31 = load i8, ptr %30, align 1, !tbaa !13
-  %32 = icmp eq i8 %31, 0
+21:            ; char2ucase inlined               ; preds = %16, %21
+  %22 = phi i64 [ %29, %21 ], [ 0, %16 ]     ; i=0 (init val)
+  %23 = phi i8 [ %31, %21 ], [ %19, %16 ]    ; ucase (init val)
+  %24 = getelementptr inbounds i8, ptr %1, i64 %22    ; ucase[%22] or ucase[i]
+  %25 = add i8 %23, -97       ; ascii_dec(ucase[i]) -97
+  %26 = icmp ult i8 %25, 26   ; %25 in [0, 26)
+  %27 = and i8 %23, 95        ; turn the 6th bit from LHS OFF (that gives mag:32)
+  %28 = select i1 %26, i8 %27, i8 %23     ; choose the appropriate value of character after conversion
+  store i8 %28, ptr %24, align 1, !tbaa !13     ; ucase[i] = char2ucase(ucase[i])
+  %29 = add nuw nsw i64 %22, 1      ; i++
+  %30 = getelementptr inbounds i8, ptr %1, i64 %29    ; &ucase[%29] or &ucase[i]
+  %31 = load i8, ptr %30, align 1, !tbaa !13    ; ucase[i]
+  %32 = icmp eq i8 %31, 0       ; ucase[i] == '\0'
   br i1 %32, label %33, label %21, !llvm.loop !22
 
-33:                                               ; preds = %21
-  %34 = getelementptr inbounds i8, ptr %1, i64 %29
-  br label %35
+33:                                               ; preds = %21, %16
+  %34 = load i8, ptr %1, align 1, !tbaa !13   ; ucase[0]
+  %35 = icmp eq i8 %34, 0       ; ucase[0] == '\0'
+  br i1 %35, label %46, label %41
 
-35:                                               ; preds = %33, %16
-  %36 = phi ptr [ %1, %16 ], [ %34, %33 ]
-  store i8 0, ptr %36, align 1, !tbaa !13
-  %37 = load i8, ptr %1, align 1, !tbaa !13
-  %38 = icmp eq i8 %37, 0
-  br i1 %38, label %49, label %44
+36:                                               ; preds = %41
+  %37 = add i64 %43, 1    ; i++
+  %38 = getelementptr inbounds i8, ptr %1, i64 %37    ; &ucase[%37] or &ucase[i]
+  %39 = load i8, ptr %38, align 1, !tbaa !13      ; ucase[i]
+  %40 = icmp eq i8 %39, 0     ; ucase[i] == '\0'
+  br i1 %40, label %46, label %41, !llvm.loop !20
 
-39:                                               ; preds = %44
-  %40 = add i64 %46, 1
-  %41 = getelementptr inbounds i8, ptr %1, i64 %40
-  %42 = load i8, ptr %41, align 1, !tbaa !13
-  %43 = icmp eq i8 %42, 0
-  br i1 %43, label %49, label %44, !llvm.loop !20
+41:            ; isucase inlined                  ; preds = %33, %36
+  %42 = phi i8 [ %39, %36 ], [ %34, %33 ]   ; ucase[0] (init val)
+  %43 = phi i64 [ %37, %36 ], [ 0, %33 ]    ; i=0 (init val)
+  %44 = add i8 %42, -97     ; ascii_dec(ucase[0]) - 97
+  %45 = icmp ult i8 %44, 26     ; %44 in [0, 26)
+  br i1 %45, label %46, label %36
 
-44:                                               ; preds = %35, %39
-  %45 = phi i8 [ %42, %39 ], [ %37, %35 ]
-  %46 = phi i64 [ %40, %39 ], [ 0, %35 ]
-  %47 = add i8 %45, -97
-  %48 = icmp ult i8 %47, 26
-  br i1 %48, label %49, label %39
-
-49:                                               ; preds = %44, %39, %35, %2
-  %50 = phi i32 [ -6, %2 ], [ 0, %35 ], [ 0, %39 ], [ -12, %44 ]
-  ret i32 %50
+46:                                               ; preds = %41, %36, %33, %2
+  %47 = phi i32 [ -6, %2 ], [ 0, %33 ], [ 0, %36 ], [ -12, %41 ]
+  ret i32 %47
 }
 
 ; Function Attrs: nofree nounwind uwtable
-define dso_local range(i32 -14, 1) i32 @cmp2strs(ptr noundef readonly %0, ptr nocapture noundef readonly %1, i32 noundef %2) local_unnamed_addr #12 {
-  %4 = icmp eq ptr %0, null
-  br i1 %4, label %126, label %5
+define dso_local range(i32 -14, 1) i32 @cmp2strs(ptr noundef readonly %0, ptr noundef readonly %1, i32 noundef %2) local_unnamed_addr #11 {
+  %4 = icmp eq ptr %0, null       ; !str1
+  br i1 %4, label %128, label %5
 
 5:                                                ; preds = %3
-  %6 = load ptr, ptr %0, align 8, !tbaa !11
-  %7 = icmp eq ptr %6, null
-  br i1 %7, label %126, label %8
+  %6 = load ptr, ptr %0, align 8, !tbaa !11   ; str1.data
+  %7 = icmp ne ptr %6, null   ; !str1.data
+  %8 = icmp ne ptr %1, null   ; !str2
+  %9 = and i1 %8, %7
+  br i1 %9, label %10, label %128
 
-8:                                                ; preds = %5
-  %9 = load ptr, ptr %1, align 8, !tbaa !11
-  %10 = icmp eq ptr %9, null
-  br i1 %10, label %126, label %11
+10:                                               ; preds = %5
+  %11 = load ptr, ptr %1, align 8, !tbaa !11    ; str2.data
+  %12 = icmp eq ptr %11, null       ; !str2.data
+  br i1 %12, label %128, label %13
 
-11:                                               ; preds = %8
-  %12 = getelementptr inbounds i8, ptr %0, i64 8
-  %13 = load i64, ptr %12, align 8, !tbaa !12
-  %14 = getelementptr inbounds i8, ptr %1, i64 8
-  %15 = load i64, ptr %14, align 8, !tbaa !12
-  %16 = icmp eq i64 %13, %15
-  br i1 %16, label %17, label %126
+13:                                               ; preds = %10
+  %14 = getelementptr inbounds i8, ptr %0, i64 8    ; &str1.len
+  %15 = load i64, ptr %14, align 8, !tbaa !12       ; str1.len
+  %16 = getelementptr inbounds i8, ptr %1, i64 8    ; &str2.len
+  %17 = load i64, ptr %16, align 8, !tbaa !12       ; str2.len
+  %18 = icmp eq i64 %15, %17         ; str1.len == str2.len
+  br i1 %18, label %19, label %128
 
-17:                                               ; preds = %11
-  %18 = icmp eq i32 %2, 0
-  br i1 %18, label %19, label %23
+19:                                               ; preds = %13
+  %20 = icmp eq i32 %2, 0         ; sensitivity == 0
+  br i1 %20, label %21, label %25
 
-19:                                               ; preds = %17
-  %20 = tail call i32 @bcmp(ptr nonnull %6, ptr nonnull %9, i64 %13)
-  %21 = icmp eq i32 %20, 0
-  %22 = select i1 %21, i32 0, i32 -13
+21:                                               ; preds = %19
+  %22 = tail call i32 @bcmp(ptr nonnull %6, ptr nonnull %11, i64 %15)   ; memcmp(str1.data, str2.data)
+  %23 = icmp eq i32 %22, 0      ; 0 for success
+  %24 = select i1 %23, i32 0, i32 -13
+  br label %128     ; ret block
+
+25:                                               ; preds = %19
+  %26 = add i64 %15, 1    ; str1.len + 1 (to count for '\0')
+  %27 = tail call ptr @llvm.stacksave.p0()
+  %28 = alloca i8, i64 %26, align 16        ; Allocate tmp1[%26] on stack
+  %29 = load i64, ptr %16, align 8, !tbaa !12
+  %30 = add i64 %29, 1    ; str2.len + 1 (to count for '\0')
+  %31 = alloca i8, i64 %30, align 16        ; tmp2[%31]
+  ; tolcase(str1->data, tmp1) inlined
+  %32 = load ptr, ptr %0, align 8, !tbaa !11    ; &str1.data
+  %33 = icmp eq ptr %32, null       ; !str1.data
+  br i1 %33, label %126, label %34
+
+34:                                               ; preds = %25
+  %35 = load i8, ptr %32, align 1, !tbaa !13    ; str1.data[0]
+  %36 = icmp eq i8 %35, 0       ; str1.data[0] == '\0'
+  br i1 %36, label %46, label %37
+
+37:                                               ; preds = %34, %37
+  %38 = phi i32 [ %41, %37 ], [ 0, %34 ]      ; len=0 (init val)
+  %39 = phi ptr [ %40, %37 ], [ %32, %34 ]    ; &str1.data
+  %40 = getelementptr inbounds i8, ptr %39, i64 1   ; &str1.data[..+1]
+  %41 = add nuw nsw i32 %38, 1    ; len++
+  %42 = load i8, ptr %40, align 1, !tbaa !13    ; str1.data[.]
+  %43 = icmp eq i8 %42, 0    ; str1.data[.] == '\0'
+  br i1 %43, label %44, label %37, !llvm.loop !17
+
+44:                                               ; preds = %37
+  %45 = zext nneg i32 %41 to i64      ; zero-extend len to i64
+  br label %46
+
+46:       ; copystr(str1.data, tmp1) inlined      ; preds = %44, %34
+  %47 = phi i64 [ 0, %34 ], [ %45, %44 ]    ; computed len
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 16 %28, ptr nonnull readonly align 1 %32, i64 %47, i1 false)
+  %48 = getelementptr inbounds i8, ptr %28, i64 %47    ; &tmp1[len]  (the end of tmp1 buff)
+  store i8 0, ptr %48, align 1, !tbaa !13       ; tmp1[len] = '\0'
+  %49 = load i8, ptr %28, align 16, !tbaa !13   ; tmp1[0]
+  %50 = icmp eq i8 %49, 0     ; tmp1[0] == '\0'
+  br i1 %50, label %63, label %51
+
+51:            ; char2lcase loop inlined          ; preds = %46, %51
+  %52 = phi i64 [ %59, %51 ], [ 0, %46 ]     ; i=0 (init val)
+  %53 = phi i8 [ %61, %51 ], [ %49, %46 ]    ; tmp1[0]
+  %54 = getelementptr inbounds i8, ptr %28, i64 %52   ; tmp1[i]
+  %55 = add i8 %53, -65       ; ascii_dec(tmp1[i]) - 65
+  %56 = icmp ult i8 %55, 26   ; %55 in [0, 26)
+  %57 = or disjoint i8 %53, 32    ; Turn the 6th bit (mag:32) ON
+  %58 = select i1 %56, i8 %57, i8 %53     ; choose the right char value after conversion
+  store i8 %58, ptr %54, align 1, !tbaa !13     ; tmp[1] = char2lcase(tmp[1])
+  %59 = add nuw nsw i64 %52, 1      ; i++
+  %60 = getelementptr inbounds i8, ptr %28, i64 %59     ; &tmp1[i]
+  %61 = load i8, ptr %60, align 1, !tbaa !13    ; tmp1[i]
+  %62 = icmp eq i8 %61, 0     ; tmp1[i] == '\0'
+  br i1 %62, label %63, label %51, !llvm.loop !21
+
+63:                                               ; preds = %51, %46
+  %64 = load i8, ptr %28, align 16, !tbaa !13   ; tmp1[0]
+  %65 = icmp eq i8 %64, 0     ; tmp1[0] == '\0'
+  br i1 %65, label %76, label %71
+
+66:            ; islcase inlined                  ; preds = %71
+  %67 = add i64 %73, 1    ; i++ (init val 0)
+  %68 = getelementptr inbounds i8, ptr %28, i64 %67   ; &tmp1[%67] or tmp1[i]
+  %69 = load i8, ptr %68, align 1, !tbaa !13    ; tmp1[i]
+  %70 = icmp eq i8 %69, 0     ; tmp1[i] == '\0'
+  br i1 %70, label %76, label %71, !llvm.loop !19
+
+71:                                               ; preds = %63, %66
+  %72 = phi i8 [ %69, %66 ], [ %64, %63 ]   ; tmp1[0]
+  %73 = phi i64 [ %67, %66 ], [ 0, %63 ]    ; i=0 (init val)
+  %74 = add i8 %72, -65         ; ascii_dec(tmp1[0]) - 65
+  %75 = icmp ult i8 %74, 26     ; %74 in [0, 26)
+  br i1 %75, label %126, label %66
+
+76:                                               ; preds = %66, %63
+  %77 = load ptr, ptr %1, align 8, !tbaa !11    ; str2.data
+  %78 = icmp eq ptr %77, null       ; !str2.data
+  br i1 %78, label %126, label %79
+
+79:      ; copystr(str2.data, tmp2) inlined       ; preds = %76
+  %80 = load i8, ptr %77, align 1, !tbaa !13   ; str2.data[0]
+  %81 = icmp eq i8 %80, 0   ; str2.data[0] == '\0'
+  br i1 %81, label %91, label %82
+
+82:              ; lenstr inlined               ; preds = %79, %82
+  %83 = phi i32 [ %86, %82 ], [ 0, %79 ]      ; len=0 (init val)
+  %84 = phi ptr [ %85, %82 ], [ %77, %79 ]    ; ptr=str2.data (init val)
+  %85 = getelementptr inbounds i8, ptr %84, i64 1   ; str2.data[..+1]
+  %86 = add nuw nsw i32 %83, 1      ; len++
+  %87 = load i8, ptr %85, align 1, !tbaa !13    ; str2.data[.]
+  %88 = icmp eq i8 %87, 0     ; str2.data[.] == '\0'
+  br i1 %88, label %89, label %82, !llvm.loop !17
+
+89:                                               ; preds = %82
+  %90 = zext nneg i32 %86 to i64    ; zero-extend to i64
+  br label %91
+
+91:                                               ; preds = %89, %79
+  %92 = phi i64 [ 0, %79 ], [ %90, %89 ]    ; computed len
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 16 %31, ptr nonnull readonly align 1 %77, i64 %92, i1 false)
+  %93 = getelementptr inbounds i8, ptr %31, i64 %92   ; &tmp2[len]
+  store i8 0, ptr %93, align 1, !tbaa !13       ; tmp2[len] == '\0'
+  %94 = load i8, ptr %31, align 16, !tbaa !13   ; tmp2[0]
+  %95 = icmp eq i8 %94, 0         ; tmp2[0] == '\0'
+  br i1 %95, label %108, label %96
+
+96:                                               ; preds = %91, %96
+  %97 = phi i64 [ %104, %96 ], [ 0, %91 ]     ; i=0 (init val)
+  %98 = phi i8 [ %106, %96 ], [ %94, %91 ]    ; tmp2[0] (init val)
+  %99 = getelementptr inbounds i8, ptr %31, i64 %97   ; &tmp2[%97] or tmp2[i]
+  %100 = add i8 %98, -65          ; ascii_dec(tmp2[i]) - 65
+  %101 = icmp ult i8 %100, 26     ; %100 in [0, 26)
+  %102 = or disjoint i8 %98, 32   ; turn the 6th bit (mag:32) ON
+  %103 = select i1 %101, i8 %102, i8 %98    ; choose the correct char after conversion
+  store i8 %103, ptr %99, align 1, !tbaa !13    ; tmp2[i] = char2lcase(tmp2[i])
+  %104 = add nuw nsw i64 %97, 1   ; i++
+  %105 = getelementptr inbounds i8, ptr %31, i64 %104     ; &tmp2[i]
+  %106 = load i8, ptr %105, align 1, !tbaa !13    ;tmp2[i]
+  %107 = icmp eq i8 %106, 0   ; tmp2[i] == '\0'
+  br i1 %107, label %108, label %96, !llvm.loop !21
+
+108:          ; islcase inlined                   ; preds = %96, %91
+  %109 = load i8, ptr %31, align 16, !tbaa !13  ; tmp2[0]
+  %110 = icmp eq i8 %109, 0     ; tmp2[0] == '\0'
+  br i1 %110, label %121, label %116
+
+111:                                              ; preds = %116
+  %112 = add i64 %118, 1     ; i++
+  %113 = getelementptr inbounds i8, ptr %31, i64 %112    ; &tmp2[i]
+  %114 = load i8, ptr %113, align 1, !tbaa !13      ; tmp2[i]
+  %115 = icmp eq i8 %114, 0     ; tmp2[i] == '\0'
+  br i1 %115, label %121, label %116, !llvm.loop !19
+
+116:                                              ; preds = %108, %111
+  %117 = phi i8 [ %114, %111 ], [ %109, %108 ]    ; tmp2[0] (init val)
+  %118 = phi i64 [ %112, %111 ], [ 0, %108 ]      ; i=0 (init val)
+  %119 = add i8 %117, -65       ; tmp2[i] - 65
+  %120 = icmp ult i8 %119, 26   ; %119 in [0, 26)
+  br i1 %120, label %126, label %111
+
+121:            ; memcmp, finally                 ; preds = %111, %108
+  %122 = load i64, ptr %14, align 8, !tbaa !12    ; str1.len
+  %123 = call i32 @bcmp(ptr nonnull %28, ptr nonnull %31, i64 %122)
+  %124 = icmp eq i32 %123, 0    ; 0 for SUCCESS
+  %125 = select i1 %124, i32 0, i32 -13
   br label %126
 
-23:                                               ; preds = %17
-  %24 = add i64 %13, 1
-  %25 = tail call ptr @llvm.stacksave.p0()
-  %26 = alloca i8, i64 %24, align 16
-  %27 = load i64, ptr %14, align 8, !tbaa !12
-  %28 = add i64 %27, 1
-  %29 = alloca i8, i64 %28, align 16
-  %30 = load ptr, ptr %0, align 8, !tbaa !11
-  %31 = icmp eq ptr %30, null
-  br i1 %31, label %124, label %32
+126:                                              ; preds = %71, %116, %76, %25, %121
+  %127 = phi i32 [ %125, %121 ], [ -14, %25 ], [ -14, %76 ], [ -14, %116 ], [ -14, %71 ]
+  tail call void @llvm.stackrestore.p0(ptr %27)
+  br label %128
 
-32:                                               ; preds = %23
-  %33 = load i8, ptr %30, align 1, !tbaa !13
-  %34 = icmp eq i8 %33, 0
-  br i1 %34, label %44, label %35
-
-35:                                               ; preds = %32, %35
-  %36 = phi i32 [ %39, %35 ], [ 0, %32 ]
-  %37 = phi ptr [ %38, %35 ], [ %30, %32 ]
-  %38 = getelementptr inbounds i8, ptr %37, i64 1
-  %39 = add nuw nsw i32 %36, 1
-  %40 = load i8, ptr %38, align 1, !tbaa !13
-  %41 = icmp eq i8 %40, 0
-  br i1 %41, label %42, label %35, !llvm.loop !17
-
-42:                                               ; preds = %35
-  %43 = zext nneg i32 %39 to i64
-  br label %44
-
-44:                                               ; preds = %42, %32
-  %45 = phi i64 [ 0, %32 ], [ %43, %42 ]
-  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 16 %26, ptr nonnull readonly align 1 %30, i64 %45, i1 false)
-  %46 = getelementptr inbounds i8, ptr %26, i64 %45
-  store i8 0, ptr %46, align 1, !tbaa !13
-  %47 = load i8, ptr %26, align 16, !tbaa !13
-  %48 = icmp eq i8 %47, 0
-  br i1 %48, label %61, label %49
-
-49:                                               ; preds = %44, %49
-  %50 = phi i64 [ %57, %49 ], [ 0, %44 ]
-  %51 = phi i8 [ %59, %49 ], [ %47, %44 ]
-  %52 = getelementptr inbounds i8, ptr %26, i64 %50
-  %53 = add i8 %51, -65
-  %54 = icmp ult i8 %53, 26
-  %55 = or disjoint i8 %51, 32
-  %56 = select i1 %54, i8 %55, i8 %51
-  store i8 %56, ptr %52, align 1, !tbaa !13
-  %57 = add nuw nsw i64 %50, 1
-  %58 = getelementptr inbounds i8, ptr %26, i64 %57
-  %59 = load i8, ptr %58, align 1, !tbaa !13
-  %60 = icmp eq i8 %59, 0
-  br i1 %60, label %61, label %49, !llvm.loop !21
-
-61:                                               ; preds = %49, %44
-  %62 = load i8, ptr %26, align 16, !tbaa !13
-  %63 = icmp eq i8 %62, 0
-  br i1 %63, label %74, label %69
-
-64:                                               ; preds = %69
-  %65 = add i64 %71, 1
-  %66 = getelementptr inbounds i8, ptr %26, i64 %65
-  %67 = load i8, ptr %66, align 1, !tbaa !13
-  %68 = icmp eq i8 %67, 0
-  br i1 %68, label %74, label %69, !llvm.loop !19
-
-69:                                               ; preds = %61, %64
-  %70 = phi i8 [ %67, %64 ], [ %62, %61 ]
-  %71 = phi i64 [ %65, %64 ], [ 0, %61 ]
-  %72 = add i8 %70, -65
-  %73 = icmp ult i8 %72, 26
-  br i1 %73, label %124, label %64
-
-74:                                               ; preds = %64, %61
-  %75 = load ptr, ptr %1, align 8, !tbaa !11
-  %76 = icmp eq ptr %75, null
-  br i1 %76, label %124, label %77
-
-77:                                               ; preds = %74
-  %78 = load i8, ptr %75, align 1, !tbaa !13
-  %79 = icmp eq i8 %78, 0
-  br i1 %79, label %89, label %80
-
-80:                                               ; preds = %77, %80
-  %81 = phi i32 [ %84, %80 ], [ 0, %77 ]
-  %82 = phi ptr [ %83, %80 ], [ %75, %77 ]
-  %83 = getelementptr inbounds i8, ptr %82, i64 1
-  %84 = add nuw nsw i32 %81, 1
-  %85 = load i8, ptr %83, align 1, !tbaa !13
-  %86 = icmp eq i8 %85, 0
-  br i1 %86, label %87, label %80, !llvm.loop !17
-
-87:                                               ; preds = %80
-  %88 = zext nneg i32 %84 to i64
-  br label %89
-
-89:                                               ; preds = %87, %77
-  %90 = phi i64 [ 0, %77 ], [ %88, %87 ]
-  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 16 %29, ptr nonnull readonly align 1 %75, i64 %90, i1 false)
-  %91 = getelementptr inbounds i8, ptr %29, i64 %90
-  store i8 0, ptr %91, align 1, !tbaa !13
-  %92 = load i8, ptr %29, align 16, !tbaa !13
-  %93 = icmp eq i8 %92, 0
-  br i1 %93, label %106, label %94
-
-94:                                               ; preds = %89, %94
-  %95 = phi i64 [ %102, %94 ], [ 0, %89 ]
-  %96 = phi i8 [ %104, %94 ], [ %92, %89 ]
-  %97 = getelementptr inbounds i8, ptr %29, i64 %95
-  %98 = add i8 %96, -65
-  %99 = icmp ult i8 %98, 26
-  %100 = or disjoint i8 %96, 32
-  %101 = select i1 %99, i8 %100, i8 %96
-  store i8 %101, ptr %97, align 1, !tbaa !13
-  %102 = add nuw nsw i64 %95, 1
-  %103 = getelementptr inbounds i8, ptr %29, i64 %102
-  %104 = load i8, ptr %103, align 1, !tbaa !13
-  %105 = icmp eq i8 %104, 0
-  br i1 %105, label %106, label %94, !llvm.loop !21
-
-106:                                              ; preds = %94, %89
-  %107 = load i8, ptr %29, align 16, !tbaa !13
-  %108 = icmp eq i8 %107, 0
-  br i1 %108, label %119, label %114
-
-109:                                              ; preds = %114
-  %110 = add i64 %116, 1
-  %111 = getelementptr inbounds i8, ptr %29, i64 %110
-  %112 = load i8, ptr %111, align 1, !tbaa !13
-  %113 = icmp eq i8 %112, 0
-  br i1 %113, label %119, label %114, !llvm.loop !19
-
-114:                                              ; preds = %106, %109
-  %115 = phi i8 [ %112, %109 ], [ %107, %106 ]
-  %116 = phi i64 [ %110, %109 ], [ 0, %106 ]
-  %117 = add i8 %115, -65
-  %118 = icmp ult i8 %117, 26
-  br i1 %118, label %124, label %109
-
-119:                                              ; preds = %109, %106
-  %120 = load i64, ptr %12, align 8, !tbaa !12
-  %121 = call i32 @bcmp(ptr nonnull %26, ptr nonnull %29, i64 %120)
-  %122 = icmp eq i32 %121, 0
-  %123 = select i1 %122, i32 0, i32 -13
-  br label %124
-
-124:                                              ; preds = %69, %114, %74, %23, %119
-  %125 = phi i32 [ %123, %119 ], [ -14, %23 ], [ -14, %74 ], [ -14, %114 ], [ -14, %69 ]
-  tail call void @llvm.stackrestore.p0(ptr %25)
-  br label %126
-
-126:                                              ; preds = %11, %3, %5, %8, %124, %19
-  %127 = phi i32 [ %22, %19 ], [ %125, %124 ], [ -4, %8 ], [ -4, %5 ], [ -4, %3 ], [ -13, %11 ]
-  ret i32 %127
+128:                                              ; preds = %13, %3, %5, %10, %126, %21
+  %129 = phi i32 [ %24, %21 ], [ %127, %126 ], [ -4, %10 ], [ -4, %5 ], [ -4, %3 ], [ -13, %13 ]
+  ret i32 %129
 }
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn
-declare ptr @llvm.stacksave.p0() #13
+declare ptr @llvm.stacksave.p0() #12
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn
-declare void @llvm.stackrestore.p0(ptr) #13
+declare void @llvm.stackrestore.p0(ptr) #12
 
 ; Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite) uwtable
-define dso_local range(i32 -6, 18) i32 @findchar(ptr noundef readonly %0, i8 noundef signext %1, i32 noundef %2, ptr nocapture noundef writeonly %3) local_unnamed_addr #14 {
+define dso_local range(i32 -6, 18) i32 @findchar(ptr noundef readonly %0, i8 noundef signext %1, i32 noundef %2, ptr nocapture noundef writeonly %3) local_unnamed_addr #13 {
   %5 = icmp eq ptr %0, null
   br i1 %5, label %47, label %6
 
@@ -778,7 +775,7 @@ define dso_local range(i32 -6, 18) i32 @findchar(ptr noundef readonly %0, i8 nou
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none) uwtable
-define dso_local range(i32 -4, 1) i32 @clearStr(ptr noundef %0) local_unnamed_addr #15 {
+define dso_local range(i32 -4, 1) i32 @clearStr(ptr noundef %0) local_unnamed_addr #14 {
   %2 = icmp eq ptr %0, null
   br i1 %2, label %8, label %3
 
@@ -799,7 +796,7 @@ define dso_local range(i32 -4, 1) i32 @clearStr(ptr noundef %0) local_unnamed_ad
 }
 
 ; Function Attrs: mustprogress nounwind willreturn uwtable
-define dso_local range(i32 -4, 1) i32 @freeStr(ptr noundef %0) local_unnamed_addr #16 {
+define dso_local range(i32 -4, 1) i32 @freeStr(ptr noundef %0) local_unnamed_addr #15 {
   %2 = icmp eq ptr %0, null
   br i1 %2, label %8, label %3
 
@@ -809,7 +806,7 @@ define dso_local range(i32 -4, 1) i32 @freeStr(ptr noundef %0) local_unnamed_add
   br i1 %5, label %8, label %6
 
 6:                                                ; preds = %3
-  tail call void @free(ptr noundef %4) #25
+  tail call void @free(ptr noundef %4) #24
   %7 = getelementptr inbounds i8, ptr %0, i64 8
   tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) %7, i8 0, i64 16, i1 false)
   br label %8
@@ -820,10 +817,10 @@ define dso_local range(i32 -4, 1) i32 @freeStr(ptr noundef %0) local_unnamed_add
 }
 
 ; Function Attrs: mustprogress nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite)
-declare void @free(ptr allocptr nocapture noundef) local_unnamed_addr #17
+declare void @free(ptr allocptr nocapture noundef) local_unnamed_addr #16
 
 ; Function Attrs: nofree norecurse nosync nounwind uwtable
-define dso_local noundef i32 @kmp_search(ptr noundef readonly %0, ptr noundef readonly %1, ptr nocapture noundef %2) local_unnamed_addr #18 {
+define dso_local noundef i32 @kmp_search(ptr noundef readonly %0, ptr noundef readonly %1, ptr nocapture noundef %2) local_unnamed_addr #17 {
   %4 = icmp ne ptr %0, null
   %5 = icmp ne ptr %1, null
   %6 = and i1 %4, %5
@@ -1004,7 +1001,7 @@ define dso_local noundef i32 @kmp_search(ptr noundef readonly %0, ptr noundef re
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) uwtable
-define dso_local range(i32 -16, 1) i32 @isin(ptr noundef readonly %0) local_unnamed_addr #19 {
+define dso_local range(i32 -16, 1) i32 @isin(ptr noundef readonly %0) local_unnamed_addr #18 {
   %2 = icmp eq ptr %0, null
   br i1 %2, label %7, label %3
 
@@ -1020,7 +1017,7 @@ define dso_local range(i32 -16, 1) i32 @isin(ptr noundef readonly %0) local_unna
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, argmem: readwrite, inaccessiblemem: none) uwtable
-define dso_local range(i32 -16, 1) i32 @firstOccurrence(ptr noundef readonly %0, ptr nocapture noundef writeonly %1) local_unnamed_addr #20 {
+define dso_local range(i32 -16, 1) i32 @firstOccurrence(ptr noundef readonly %0, ptr nocapture noundef writeonly %1) local_unnamed_addr #19 {
   %3 = icmp eq ptr %0, null
   br i1 %3, label %17, label %4
 
@@ -1084,10 +1081,10 @@ define dso_local range(i32 -16, 1) i32 @allOccurrences(ptr noundef readonly %0, 
 }
 
 ; Function Attrs: nofree nounwind willreturn memory(argmem: read)
-declare i32 @bcmp(ptr nocapture, ptr nocapture, i64) local_unnamed_addr #21
+declare i32 @bcmp(ptr nocapture, ptr nocapture, i64) local_unnamed_addr #20
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #22
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #21
 
 attributes #0 = { mustprogress nofree nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: readwrite) uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
 attributes #1 = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
@@ -1100,21 +1097,20 @@ attributes #7 = { mustprogress nofree norecurse nosync nounwind willreturn memor
 attributes #8 = { mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none) uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
 attributes #9 = { nofree norecurse nosync nounwind memory(read, argmem: readwrite, inaccessiblemem: none) uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
 attributes #10 = { nofree norecurse nosync nounwind memory(argmem: read) uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #11 = { nofree norecurse nosync nounwind memory(readwrite, inaccessiblemem: none) uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #12 = { nofree nounwind uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #13 = { mustprogress nocallback nofree nosync nounwind willreturn }
-attributes #14 = { nofree norecurse nosync nounwind memory(argmem: readwrite) uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #15 = { mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none) uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #16 = { mustprogress nounwind willreturn uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #17 = { mustprogress nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #18 = { nofree norecurse nosync nounwind uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #19 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #20 = { mustprogress nofree norecurse nosync nounwind willreturn memory(read, argmem: readwrite, inaccessiblemem: none) uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #21 = { nofree nounwind willreturn memory(argmem: read) }
-attributes #22 = { nocallback nofree nounwind willreturn memory(argmem: write) }
-attributes #23 = { nounwind allocsize(0) }
-attributes #24 = { nounwind allocsize(1) }
-attributes #25 = { nounwind }
+attributes #11 = { nofree nounwind uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #12 = { mustprogress nocallback nofree nosync nounwind willreturn }
+attributes #13 = { nofree norecurse nosync nounwind memory(argmem: readwrite) uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #14 = { mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none) uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #15 = { mustprogress nounwind willreturn uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #16 = { mustprogress nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #17 = { nofree norecurse nosync nounwind uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #18 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #19 = { mustprogress nofree norecurse nosync nounwind willreturn memory(read, argmem: readwrite, inaccessiblemem: none) uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #20 = { nofree nounwind willreturn memory(argmem: read) }
+attributes #21 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #22 = { nounwind allocsize(0) }
+attributes #23 = { nounwind allocsize(1) }
+attributes #24 = { nounwind }
 
 !llvm.module.flags = !{!0, !1, !2, !3}
 !llvm.ident = !{!4}

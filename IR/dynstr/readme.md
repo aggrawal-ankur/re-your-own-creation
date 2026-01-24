@@ -221,7 +221,7 @@ Nothing else follows this.
 
 So, what's happening is that we subtract 65 from the character's ASCII DECIMAL value, check if the result is in `[0, 26)`, take a disjoint bitwise OR of the character's original ASCII DECIMAL value with 32 and return the result accordingly. Nice.
 
-### char2ucase
+### char2ucase()
 
 Let's try ourselves first.
 
@@ -283,11 +283,11 @@ I hope it is clear.
 
 These conversion functions were nice. ***When you explore the problem yourself, and find a solution that works properly, suddenly every other solution starts to make sense without much effort.***
 
-### islcase and isucase
+### islcase() and isucase()
 
 Same logic as char2lcase and char2ucase.
 
-### tolcase
+### tolcase()
 
 Pretty straightforward. It just combines copystr, char2lcase, and islcase. However, I've noticed two things.
 
@@ -304,4 +304,62 @@ After changes, the stats are:
 | -O0 | 1750  |
 | -O1 | 1155  |
 
-### toucase
+### toucase()
+
+I've to remove the null-terminator line here as well. So the IR reduced again. Now it is at 1148 lines.
+
+The function follows the same pattern as tolcase.
+
+### cmp2strs()
+
+This instruction needs reordering:
+```c
+if (!str1 || !str1->data|| !str2->data || !str2 ) return -INVALID_DPTR;
+// to
+if (!str1 || !str1->data || !str2 || !str2->data) return -INVALID_DPTR;
+```
+
+2 new lines added, 1150.
+
+What made me do this was again the IR. I saw inconsistent icmp and load. This forced me to see the source as now I am avoiding to look at the source while reading the IR. I am doing this since islcase. It is nice this way.
+
+---
+
+I started this IR with a question that why clang prioritizes branching over `or` in cases like these:
+```c
+if (!str1 || !str2)
+```
+clang doesn't check !str1 and !str2 and then evaluate a bitwise OR between them. Instead, first it evaluates !str1, then it branches based on the evaluation and then it checks !str2. This behavior is questionable but I didn't questioned it during `dynarr.c`.
+
+Then a thought came to my mind that I should read this IR first. I'll get my answer.
+
+Have a look at this:
+```
+5:                                                ; preds = %3
+  %6 = load ptr, ptr %0, align 8, !tbaa !11   ; str1.data
+  %7 = icmp ne ptr %6, null   ; !str1.data
+  %8 = icmp ne ptr %1, null   ; !str2
+  %9 = and i1 %8, %7
+  br i1 %9, label %10, label %128
+```
+
+Now take this from extendCap:
+```
+define dso_local range(i32 -5, 1) i32 @extendCap(ptr noundef %0, i64 noundef %1) local_unnamed_addr #2 {
+  %3 = icmp eq ptr %0, null       ; !str
+  br i1 %3, label %21, label %4
+
+4:                                                ; preds = %2
+  %5 = load ptr, ptr %0, align 8, !tbaa !11
+  %6 = icmp eq ptr %5, null       ; !str.data
+  br i1 %6, label %21, label %7
+```
+The semantics are the same, but clang used `eq` and branching instead of `ne` and `and`. What can be the reason?
+
+I've noticed something when I opened the C-source. `!str` and `!str->data` have `str` in common. `!str->data` is only possible when `str` is defined. Maybe that's the reason we can't use `and` and we have rely on branching to evaluate the validity of the object pointer before we access it's members?
+
+Based on the above understanding, cmp2strs make perfect sense because `and` is happening between `str1->data` and `str2`. The pointers are different.
+
+---
+
+Locked in, finished in one go.

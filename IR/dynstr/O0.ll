@@ -803,7 +803,7 @@ define dso_local i32 @toucase(ptr noundef %0, ptr noundef %1) #0 {
 
 10:                                               ; preds = %2
   store i32 -6, ptr %3, align 4
-  br label %51
+  br label %47
 
 11:                                               ; preds = %2
   %12 = load ptr, ptr %4, align 8
@@ -817,7 +817,7 @@ define dso_local i32 @toucase(ptr noundef %0, ptr noundef %1) #0 {
 17:                                               ; preds = %11
   %18 = load i32, ptr %6, align 4
   store i32 %18, ptr %3, align 4
-  br label %51
+  br label %47
 
 19:                                               ; preds = %11
   store i32 0, ptr %7, align 4
@@ -852,26 +852,21 @@ define dso_local i32 @toucase(ptr noundef %0, ptr noundef %1) #0 {
 
 41:                                               ; preds = %20
   %42 = load ptr, ptr %5, align 8
-  %43 = load i32, ptr %7, align 4
-  %44 = sext i32 %43 to i64
-  %45 = getelementptr inbounds i8, ptr %42, i64 %44
-  store i8 0, ptr %45, align 1
-  %46 = load ptr, ptr %5, align 8
-  %47 = call i32 @isucase(ptr noundef %46)
-  %48 = icmp eq i32 %47, 0
-  br i1 %48, label %49, label %50
+  %43 = call i32 @isucase(ptr noundef %42)
+  %44 = icmp eq i32 %43, 0
+  br i1 %44, label %45, label %46
 
-49:                                               ; preds = %41
+45:                                               ; preds = %41
   store i32 0, ptr %3, align 4
-  br label %51
+  br label %47
 
-50:                                               ; preds = %41
+46:                                               ; preds = %41
   store i32 -12, ptr %3, align 4
-  br label %51
+  br label %47
 
-51:                                               ; preds = %50, %49, %17, %10
-  %52 = load i32, ptr %3, align 4
-  ret i32 %52
+47:                                               ; preds = %46, %45, %17, %10
+  %48 = load i32, ptr %3, align 4
+  ret i32 %48
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
@@ -901,21 +896,21 @@ define dso_local i32 @cmp2strs(ptr noundef %0, ptr noundef %1, i32 noundef %2) #
 
 20:                                               ; preds = %15
   %21 = load ptr, ptr %6, align 8
-  %22 = getelementptr inbounds %struct.DynString, ptr %21, i32 0, i32 0
-  %23 = load ptr, ptr %22, align 8
-  %24 = icmp ne ptr %23, null
-  br i1 %24, label %25, label %28
+  %22 = icmp ne ptr %21, null
+  br i1 %22, label %23, label %28
 
-25:                                               ; preds = %20
-  %26 = load ptr, ptr %6, align 8
+23:                                               ; preds = %20
+  %24 = load ptr, ptr %6, align 8
+  %25 = getelementptr inbounds %struct.DynString, ptr %24, i32 0, i32 0
+  %26 = load ptr, ptr %25, align 8
   %27 = icmp ne ptr %26, null
   br i1 %27, label %29, label %28
 
-28:                                               ; preds = %25, %20, %15, %3
+28:                                               ; preds = %23, %20, %15, %3
   store i32 -4, ptr %4, align 4
   br label %91
 
-29:                                               ; preds = %25
+29:                                               ; preds = %23
   %30 = load ptr, ptr %5, align 8
   %31 = getelementptr inbounds %struct.DynString, ptr %30, i32 0, i32 1
   %32 = load i64, ptr %31, align 8

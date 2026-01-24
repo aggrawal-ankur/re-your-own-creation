@@ -145,14 +145,13 @@ DynStrStatus toucase(const char* str, char* ucase){
     ucase[i] = char2ucase(ucase[i]);
     i++;
   }
-  ucase[i] = '\0';
 
   if (isucase(ucase) == SUCCESS) return SUCCESS;
   return -TOUCASE_FAILED;
 }
 
 DynStrStatus cmp2strs(const DynString* str1, const DynString* str2, int sensitivity){
-  if (!str1 || !str1->data || !str2->data || !str2) return -INVALID_DPTR;
+  if (!str1 || !str1->data || !str2 || !str2->data) return -INVALID_DPTR;
   if (str1->len != str2->len) return -STRS_NOT_EQUAL;
 
   // sensitivity: 0 (sensitive) 1 (insensitive)
