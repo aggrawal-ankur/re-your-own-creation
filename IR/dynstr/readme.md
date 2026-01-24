@@ -49,7 +49,7 @@ I have skipped kmp_build_lps and kmp_search for now. And I am gonna do that for 
 
 As I was analyzing it, I felt uneasy at block 9. I wasted a lot of my time because of that. Then I realized lenstr() is in a problematic state.
 
-First of all, lesntr() returned size_t, but it can also return -INVALID_BUFF, which will wrap around to a huge +ve value.
+First of all, lenstr() returned size_t, but it can also return -INVALID_BUFF, which will wrap around to a huge +ve value.
 
 Second, there was no error handling around lenstr() call. If it returned INVALID_BUFF, everything downstream will be disturbed.
 
@@ -78,7 +78,7 @@ While `populate` was successful in confusing me, the function itself was simple.
 
 This is after the length is calculated and now we move forward in the logic. %20 is the computed and zero-extended (i64) length. The question is, why length must be zero if the control comes from block 9. Block 9 is where lenstr was inlined.
 
-See, `!src` is already checked by `populate`, so `lenstr` logic starts from initializing `len=0`. Now the loop starts from str[1] upto len-1. str[0] was already checked in %18. Although LLVM could have reused the result from block 7 as well.
+See, `!src` is already checked by `populate`, so `lenstr` logic starts from initializing `len=0`. Now the loop starts from str[1] up to len-1. str[0] was already checked in %18. Although LLVM could have reused the result from block 7 as well.
 
 Anyways, if the string was empty, it would never reach the part where lenstr is inlined. Before the loop executes, the count is already 1. If the control to block 21 goes from the loop block, i.e block 12, the length is guaranteed to be >0. But if the control comes from block 9, that means src was null, that's why 0 is set in this case. It wasn't really a part of the code, but it is necessary to glue lenstr with populate properly.
 
@@ -282,3 +282,26 @@ I hope it is clear.
 ---
 
 These conversion functions were nice. ***When you explore the problem yourself, and find a solution that works properly, suddenly every other solution starts to make sense without much effort.***
+
+### islcase and isucase
+
+Same logic as char2lcase and char2ucase.
+
+### tolcase
+
+Pretty straightforward. It just combines copystr, char2lcase, and islcase. However, I've noticed two things.
+
+1. For some reason, I felt that exportdyntobuff is basically copystr. When I checked, it indeed is. exportdyntobuff only makes the first argument a dynamic string. That's it.
+2. This line: `lcase[i] = '\0';` in copystr in unnecessary as copystr itself appends the null-character to the end of the buffer.
+
+I am gonna remove these things.
+
+After changes, the stats are:
+
+|     | Lines |
+| :-- | :---- |
+| C   | 308   |
+| -O0 | 1750  |
+| -O1 | 1155  |
+
+### toucase

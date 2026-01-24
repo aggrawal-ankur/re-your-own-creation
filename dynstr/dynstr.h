@@ -70,13 +70,10 @@ DynStrStatus clearStr(DynString* str);
 // Deallocate the dynamic string completely (release the capacity)
 DynStrStatus freeStr(DynString* str);
 
-// Export a dynamic string to a char buffer (stack or heap)
-DynStrStatus exportdyntobuff(const DynString* str, char *buff);
-
-// Convert a string to lowercase
+// Convert a string to lowercase (lcase must be callee-allocated)
 DynStrStatus tolcase(const char* str, char* lcase);
 
-// Convert a string to uppercase
+// Convert a string to uppercase (ucase must be callee-allocated)
 DynStrStatus toucase(const char* str, char* ucase);
 
 // Check if a string is lowercase

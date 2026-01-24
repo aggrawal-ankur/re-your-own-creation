@@ -722,7 +722,7 @@ define dso_local i32 @tolcase(ptr noundef %0, ptr noundef %1) #0 {
 
 10:                                               ; preds = %2
   store i32 -6, ptr %3, align 4
-  br label %51
+  br label %47
 
 11:                                               ; preds = %2
   %12 = load ptr, ptr %4, align 8
@@ -736,7 +736,7 @@ define dso_local i32 @tolcase(ptr noundef %0, ptr noundef %1) #0 {
 17:                                               ; preds = %11
   %18 = load i32, ptr %6, align 4
   store i32 %18, ptr %3, align 4
-  br label %51
+  br label %47
 
 19:                                               ; preds = %11
   store i32 0, ptr %7, align 4
@@ -771,26 +771,21 @@ define dso_local i32 @tolcase(ptr noundef %0, ptr noundef %1) #0 {
 
 41:                                               ; preds = %20
   %42 = load ptr, ptr %5, align 8
-  %43 = load i32, ptr %7, align 4
-  %44 = sext i32 %43 to i64
-  %45 = getelementptr inbounds i8, ptr %42, i64 %44
-  store i8 0, ptr %45, align 1
-  %46 = load ptr, ptr %5, align 8
-  %47 = call i32 @islcase(ptr noundef %46)
-  %48 = icmp eq i32 %47, 0
-  br i1 %48, label %49, label %50
+  %43 = call i32 @islcase(ptr noundef %42)
+  %44 = icmp eq i32 %43, 0
+  br i1 %44, label %45, label %46
 
-49:                                               ; preds = %41
+45:                                               ; preds = %41
   store i32 0, ptr %3, align 4
-  br label %51
+  br label %47
 
-50:                                               ; preds = %41
+46:                                               ; preds = %41
   store i32 -11, ptr %3, align 4
-  br label %51
+  br label %47
 
-51:                                               ; preds = %50, %49, %17, %10
-  %52 = load i32, ptr %3, align 4
-  ret i32 %52
+47:                                               ; preds = %46, %45, %17, %10
+  %48 = load i32, ptr %3, align 4
+  ret i32 %48
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
@@ -1177,45 +1172,6 @@ define dso_local i32 @findchar(ptr noundef %0, i8 noundef signext %1, i32 nounde
 82:                                               ; preds = %79, %78, %15
   %83 = load i32, ptr %5, align 4
   ret i32 %83
-}
-
-; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32 @exportdyntobuff(ptr noundef %0, ptr noundef %1) #0 {
-  %3 = alloca i32, align 4
-  %4 = alloca ptr, align 8
-  %5 = alloca ptr, align 8
-  store ptr %0, ptr %4, align 8
-  store ptr %1, ptr %5, align 8
-  %6 = load ptr, ptr %4, align 8
-  %7 = icmp ne ptr %6, null
-  br i1 %7, label %8, label %13
-
-8:                                                ; preds = %2
-  %9 = load ptr, ptr %4, align 8
-  %10 = getelementptr inbounds %struct.DynString, ptr %9, i32 0, i32 0
-  %11 = load ptr, ptr %10, align 8
-  %12 = icmp ne ptr %11, null
-  br i1 %12, label %14, label %13
-
-13:                                               ; preds = %8, %2
-  store i32 -4, ptr %3, align 4
-  br label %22
-
-14:                                               ; preds = %8
-  %15 = load ptr, ptr %5, align 8
-  %16 = load ptr, ptr %4, align 8
-  %17 = getelementptr inbounds %struct.DynString, ptr %16, i32 0, i32 0
-  %18 = load ptr, ptr %17, align 8
-  %19 = load ptr, ptr %4, align 8
-  %20 = getelementptr inbounds %struct.DynString, ptr %19, i32 0, i32 1
-  %21 = load i64, ptr %20, align 8
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %15, ptr align 1 %18, i64 %21, i1 false)
-  store i32 0, ptr %3, align 4
-  br label %22
-
-22:                                               ; preds = %14, %13
-  %23 = load i32, ptr %3, align 4
-  ret i32 %23
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable

@@ -129,7 +129,6 @@ DynStrStatus tolcase(const char* str, char* lcase){
     lcase[i] = char2lcase(lcase[i]);
     i++;
   }
-  lcase[i] = '\0';
 
   if (islcase(lcase) == SUCCESS) return SUCCESS;
   return -TOLCASE_FAILED;
@@ -192,13 +191,6 @@ DynStrStatus findchar(const char* str, char c, int sensitivity, int* count){
   if (!occ) return CHAR_NOT_FOUND;
 
   *count = occ;
-  return SUCCESS;
-}
-
-DynStrStatus exportdyntobuff(const DynString* str, char* buff){
-  if (!str || !str->data) return -INVALID_DPTR;
-
-  memcpy(buff, str->data, str->len);
   return SUCCESS;
 }
 

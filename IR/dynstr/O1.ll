@@ -311,26 +311,26 @@ define dso_local noundef signext i8 @char2ucase(i8 noundef signext %0) local_unn
 
 ; Function Attrs: nofree norecurse nosync nounwind memory(argmem: read) uwtable
 define dso_local range(i32 -9, 1) i32 @islcase(ptr noundef readonly %0) local_unnamed_addr #10 {
-  %2 = icmp eq ptr %0, null
+  %2 = icmp eq ptr %0, null       ; !str
   br i1 %2, label %16, label %3
 
 3:                                                ; preds = %1
-  %4 = load i8, ptr %0, align 1, !tbaa !13
-  %5 = icmp eq i8 %4, 0
+  %4 = load i8, ptr %0, align 1, !tbaa !13      ; str[0]
+  %5 = icmp eq i8 %4, 0       ; str[0] == '\0'
   br i1 %5, label %16, label %11
 
 6:                                                ; preds = %11
-  %7 = add i64 %13, 1
-  %8 = getelementptr inbounds i8, ptr %0, i64 %7
-  %9 = load i8, ptr %8, align 1, !tbaa !13
-  %10 = icmp eq i8 %9, 0
+  %7 = add i64 %13, 1       ; i++
+  %8 = getelementptr inbounds i8, ptr %0, i64 %7    ; &str[i] (starting from i=1)
+  %9 = load i8, ptr %8, align 1, !tbaa !13        ; str[i]
+  %10 = icmp eq i8 %9, 0    ; str[i] == '\0'
   br i1 %10, label %16, label %11, !llvm.loop !19
 
 11:                                               ; preds = %3, %6
-  %12 = phi i8 [ %9, %6 ], [ %4, %3 ]
-  %13 = phi i64 [ %7, %6 ], [ 0, %3 ]
-  %14 = add i8 %12, -65
-  %15 = icmp ult i8 %14, 26
+  %12 = phi i8 [ %9, %6 ], [ %4, %3 ]     ; str[0] (init)
+  %13 = phi i64 [ %7, %6 ], [ 0, %3 ]     ; i=0 (init)
+  %14 = add i8 %12, -65       ; ascii_dec(str[..]) - 65
+  %15 = icmp ult i8 %14, 26   ; %14 in [0, 26)
   br i1 %15, label %16, label %6
 
 16:                                               ; preds = %11, %6, %3, %1
@@ -340,26 +340,26 @@ define dso_local range(i32 -9, 1) i32 @islcase(ptr noundef readonly %0) local_un
 
 ; Function Attrs: nofree norecurse nosync nounwind memory(argmem: read) uwtable
 define dso_local range(i32 -10, 1) i32 @isucase(ptr noundef readonly %0) local_unnamed_addr #10 {
-  %2 = icmp eq ptr %0, null
+  %2 = icmp eq ptr %0, null       ; !str
   br i1 %2, label %16, label %3
 
 3:                                                ; preds = %1
-  %4 = load i8, ptr %0, align 1, !tbaa !13
-  %5 = icmp eq i8 %4, 0
+  %4 = load i8, ptr %0, align 1, !tbaa !13    ; str[0]
+  %5 = icmp eq i8 %4, 0     ; str[0] == '\0'
   br i1 %5, label %16, label %11
 
 6:                                                ; preds = %11
-  %7 = add i64 %13, 1
-  %8 = getelementptr inbounds i8, ptr %0, i64 %7
-  %9 = load i8, ptr %8, align 1, !tbaa !13
-  %10 = icmp eq i8 %9, 0
+  %7 = add i64 %13, 1       ; i++ (init val 0)
+  %8 = getelementptr inbounds i8, ptr %0, i64 %7     ; &str[%7]
+  %9 = load i8, ptr %8, align 1, !tbaa !13        ; str[i]
+  %10 = icmp eq i8 %9, 0      ; str[i] == '\0'
   br i1 %10, label %16, label %11, !llvm.loop !20
 
 11:                                               ; preds = %3, %6
-  %12 = phi i8 [ %9, %6 ], [ %4, %3 ]
-  %13 = phi i64 [ %7, %6 ], [ 0, %3 ]
-  %14 = add i8 %12, -97
-  %15 = icmp ult i8 %14, 26
+  %12 = phi i8 [ %9, %6 ], [ %4, %3 ]     ; str[0] (init)
+  %13 = phi i64 [ %7, %6 ], [ 0, %3 ]     ; i=0 (init)
+  %14 = add i8 %12, -97       ; ascii_dec(str[..]) - 97
+  %15 = icmp ult i8 %14, 26   ; %14 in [0, 26)
   br i1 %15, label %16, label %6
 
 16:                                               ; preds = %11, %6, %3, %1
@@ -369,79 +369,73 @@ define dso_local range(i32 -10, 1) i32 @isucase(ptr noundef readonly %0) local_u
 
 ; Function Attrs: nofree norecurse nosync nounwind memory(readwrite, inaccessiblemem: none) uwtable
 define dso_local noundef i32 @tolcase(ptr noundef readonly %0, ptr nocapture noundef %1) local_unnamed_addr #11 {
-  %3 = icmp eq ptr %0, null
+  %3 = icmp eq ptr %0, null     ; !str
   br i1 %3, label %49, label %4
 
 4:                                                ; preds = %2
-  %5 = load i8, ptr %0, align 1, !tbaa !13
-  %6 = icmp eq i8 %5, 0
+  %5 = load i8, ptr %0, align 1, !tbaa !13    ; str[0]
+  %6 = icmp eq i8 %5, 0   ; str[0] == '\0'
   br i1 %6, label %16, label %7
 
-7:                                                ; preds = %4, %7
-  %8 = phi i32 [ %11, %7 ], [ 0, %4 ]
-  %9 = phi ptr [ %10, %7 ], [ %0, %4 ]
-  %10 = getelementptr inbounds i8, ptr %9, i64 1
-  %11 = add nuw nsw i32 %8, 1
-  %12 = load i8, ptr %10, align 1, !tbaa !13
-  %13 = icmp eq i8 %12, 0
+7:              ; lesntr inlined                  ; preds = %4, %7
+  %8 = phi i32 [ %11, %7 ], [ 0, %4 ]     ; len=0 (init val)
+  %9 = phi ptr [ %10, %7 ], [ %0, %4 ]    ; ptr=str[0] (init val)
+  %10 = getelementptr inbounds i8, ptr %9, i64 1     ; &str[.. + 1]
+  %11 = add nuw nsw i32 %8, 1     ; len++
+  %12 = load i8, ptr %10, align 1, !tbaa !13    ; str[.. + 1]
+  %13 = icmp eq i8 %12, 0      ; str[.. + 1] == '\0'
   br i1 %13, label %14, label %7, !llvm.loop !17
 
 14:                                               ; preds = %7
-  %15 = zext nneg i32 %11 to i64
+  %15 = zext nneg i32 %11 to i64    ; zero extend len to i64
   br label %16
 
-16:                                               ; preds = %14, %4
-  %17 = phi i64 [ 0, %4 ], [ %15, %14 ]
+16:               ; copystr inlined               ; preds = %14, %4
+  %17 = phi i64 [ 0, %4 ], [ %15, %14 ]   ; computed len
   tail call void @llvm.memcpy.p0.p0.i64(ptr align 1 %1, ptr nonnull readonly align 1 %0, i64 %17, i1 false)
-  %18 = getelementptr inbounds i8, ptr %1, i64 %17
-  store i8 0, ptr %18, align 1, !tbaa !13
-  %19 = load i8, ptr %1, align 1, !tbaa !13
-  %20 = icmp eq i8 %19, 0
+  %18 = getelementptr inbounds i8, ptr %1, i64 %17    ; &lcase[%17] (the end of lcase)
+  store i8 0, ptr %18, align 1, !tbaa !13     ; lcase[len] = '\0'
+  %19 = load i8, ptr %1, align 1, !tbaa !13   ; lcase[0]
+  %20 = icmp eq i8 %19, 0         ; lcase[0] = '\0'
   br i1 %20, label %35, label %21
 
-21:                                               ; preds = %16, %21
-  %22 = phi i64 [ %29, %21 ], [ 0, %16 ]
-  %23 = phi i8 [ %31, %21 ], [ %19, %16 ]
-  %24 = getelementptr inbounds i8, ptr %1, i64 %22
-  %25 = add i8 %23, -65
-  %26 = icmp ult i8 %25, 26
-  %27 = or disjoint i8 %23, 32
-  %28 = select i1 %26, i8 %27, i8 %23
-  store i8 %28, ptr %24, align 1, !tbaa !13
-  %29 = add nuw nsw i64 %22, 1
-  %30 = getelementptr inbounds i8, ptr %1, i64 %29
-  %31 = load i8, ptr %30, align 1, !tbaa !13
-  %32 = icmp eq i8 %31, 0
+21:          ; char2lcase inlined                 ; preds = %16, %21
+  %22 = phi i64 [ %29, %21 ], [ 0, %16 ]       ; i=0 (init val)
+  %23 = phi i8 [ %31, %21 ], [ %19, %16 ]      ; 
+  %24 = getelementptr inbounds i8, ptr %1, i64 %22    ; &lcase[0]
+  %25 = add i8 %23, -65       ; ascii_dec(lcase[0]) - 65
+  %26 = icmp ult i8 %25, 26   ; %25 in [0, 26)
+  %27 = or disjoint i8 %23, 32    ; (turn ON the 6th bit from LHS (mag:32))
+  %28 = select i1 %26, i8 %27, i8 %23       ; select the right value of character after conversion to lcase
+  store i8 %28, ptr %24, align 1, !tbaa !13     ; lcase[i] = char2lcase(lcase[i])
+  %29 = add nuw nsw i64 %22, 1      ; i++
+  %30 = getelementptr inbounds i8, ptr %1, i64 %29    ; &lcase[%29]
+  %31 = load i8, ptr %30, align 1, !tbaa !13       ; lcase[i]
+  %32 = icmp eq i8 %31, 0       ; lcase[i] == '\0'
   br i1 %32, label %33, label %21, !llvm.loop !21
 
-33:                                               ; preds = %21
-  %34 = getelementptr inbounds i8, ptr %1, i64 %29
-  br label %35
+33:                                               ; preds = %21, %16
+  %34 = load i8, ptr %1, align 1, !tbaa !13     ; lcase[0]
+  %35 = icmp eq i8 %34, 0         ; lcase[0] == '\0'
+  br i1 %35, label %46, label %41
 
-35:                                               ; preds = %33, %16
-  %36 = phi ptr [ %1, %16 ], [ %34, %33 ]
-  store i8 0, ptr %36, align 1, !tbaa !13
-  %37 = load i8, ptr %1, align 1, !tbaa !13
-  %38 = icmp eq i8 %37, 0
-  br i1 %38, label %49, label %44
+36:                                               ; preds = %41
+  %37 = add i64 %43, 1    ; i++ (init val 0)
+  %38 = getelementptr inbounds i8, ptr %1, i64 %37    ; &lcase[i]
+  %39 = load i8, ptr %38, align 1, !tbaa !13        ; lcase[i]
+  %40 = icmp eq i8 %39, 0       ; lcase[0] == '\0'
+  br i1 %40, label %46, label %41, !llvm.loop !19
 
-39:                                               ; preds = %44
-  %40 = add i64 %46, 1
-  %41 = getelementptr inbounds i8, ptr %1, i64 %40
-  %42 = load i8, ptr %41, align 1, !tbaa !13
-  %43 = icmp eq i8 %42, 0
-  br i1 %43, label %49, label %44, !llvm.loop !19
+41:            ; islcase inlined                  ; preds = %33, %36
+  %42 = phi i8 [ %39, %36 ], [ %34, %33 ]   ; lcase[0] (init val)
+  %43 = phi i64 [ %37, %36 ], [ 0, %33 ]    ; i=0 (init val)
+  %44 = add i8 %42, -65         ; ascii_dec(lcase[0]) - 65
+  %45 = icmp ult i8 %44, 26     ; %47 in 0, 26)
+  br i1 %45, label %46, label %36
 
-44:                                               ; preds = %35, %39
-  %45 = phi i8 [ %42, %39 ], [ %37, %35 ]
-  %46 = phi i64 [ %40, %39 ], [ 0, %35 ]
-  %47 = add i8 %45, -65
-  %48 = icmp ult i8 %47, 26
-  br i1 %48, label %49, label %39
-
-49:                                               ; preds = %44, %39, %35, %2
-  %50 = phi i32 [ -6, %2 ], [ 0, %35 ], [ 0, %39 ], [ -11, %44 ]
-  ret i32 %50
+46:                                               ; preds = %41, %36, %33, %2
+  %47 = phi i32 [ -6, %2 ], [ 0, %33 ], [ 0, %36 ], [ -11, %41 ]
+  ret i32 %47
 }
 
 ; Function Attrs: nofree norecurse nosync nounwind memory(readwrite, inaccessiblemem: none) uwtable
@@ -524,17 +518,17 @@ define dso_local noundef i32 @toucase(ptr noundef readonly %0, ptr nocapture nou
 ; Function Attrs: nofree nounwind uwtable
 define dso_local range(i32 -14, 1) i32 @cmp2strs(ptr noundef readonly %0, ptr nocapture noundef readonly %1, i32 noundef %2) local_unnamed_addr #12 {
   %4 = icmp eq ptr %0, null
-  br i1 %4, label %132, label %5
+  br i1 %4, label %126, label %5
 
 5:                                                ; preds = %3
   %6 = load ptr, ptr %0, align 8, !tbaa !11
   %7 = icmp eq ptr %6, null
-  br i1 %7, label %132, label %8
+  br i1 %7, label %126, label %8
 
 8:                                                ; preds = %5
   %9 = load ptr, ptr %1, align 8, !tbaa !11
   %10 = icmp eq ptr %9, null
-  br i1 %10, label %132, label %11
+  br i1 %10, label %126, label %11
 
 11:                                               ; preds = %8
   %12 = getelementptr inbounds i8, ptr %0, i64 8
@@ -542,7 +536,7 @@ define dso_local range(i32 -14, 1) i32 @cmp2strs(ptr noundef readonly %0, ptr no
   %14 = getelementptr inbounds i8, ptr %1, i64 8
   %15 = load i64, ptr %14, align 8, !tbaa !12
   %16 = icmp eq i64 %13, %15
-  br i1 %16, label %17, label %132
+  br i1 %16, label %17, label %126
 
 17:                                               ; preds = %11
   %18 = icmp eq i32 %2, 0
@@ -552,7 +546,7 @@ define dso_local range(i32 -14, 1) i32 @cmp2strs(ptr noundef readonly %0, ptr no
   %20 = tail call i32 @bcmp(ptr nonnull %6, ptr nonnull %9, i64 %13)
   %21 = icmp eq i32 %20, 0
   %22 = select i1 %21, i32 0, i32 -13
-  br label %132
+  br label %126
 
 23:                                               ; preds = %17
   %24 = add i64 %13, 1
@@ -563,7 +557,7 @@ define dso_local range(i32 -14, 1) i32 @cmp2strs(ptr noundef readonly %0, ptr no
   %29 = alloca i8, i64 %28, align 16
   %30 = load ptr, ptr %0, align 8, !tbaa !11
   %31 = icmp eq ptr %30, null
-  br i1 %31, label %130, label %32
+  br i1 %31, label %124, label %32
 
 32:                                               ; preds = %23
   %33 = load i8, ptr %30, align 1, !tbaa !13
@@ -590,7 +584,7 @@ define dso_local range(i32 -14, 1) i32 @cmp2strs(ptr noundef readonly %0, ptr no
   store i8 0, ptr %46, align 1, !tbaa !13
   %47 = load i8, ptr %26, align 16, !tbaa !13
   %48 = icmp eq i8 %47, 0
-  br i1 %48, label %63, label %49
+  br i1 %48, label %61, label %49
 
 49:                                               ; preds = %44, %49
   %50 = phi i64 [ %57, %49 ], [ 0, %44 ]
@@ -607,118 +601,106 @@ define dso_local range(i32 -14, 1) i32 @cmp2strs(ptr noundef readonly %0, ptr no
   %60 = icmp eq i8 %59, 0
   br i1 %60, label %61, label %49, !llvm.loop !21
 
-61:                                               ; preds = %49
-  %62 = getelementptr inbounds i8, ptr %26, i64 %57
-  br label %63
+61:                                               ; preds = %49, %44
+  %62 = load i8, ptr %26, align 16, !tbaa !13
+  %63 = icmp eq i8 %62, 0
+  br i1 %63, label %74, label %69
 
-63:                                               ; preds = %61, %44
-  %64 = phi ptr [ %26, %44 ], [ %62, %61 ]
-  store i8 0, ptr %64, align 1, !tbaa !13
-  %65 = load i8, ptr %26, align 16, !tbaa !13
-  %66 = icmp eq i8 %65, 0
-  br i1 %66, label %77, label %72
+64:                                               ; preds = %69
+  %65 = add i64 %71, 1
+  %66 = getelementptr inbounds i8, ptr %26, i64 %65
+  %67 = load i8, ptr %66, align 1, !tbaa !13
+  %68 = icmp eq i8 %67, 0
+  br i1 %68, label %74, label %69, !llvm.loop !19
 
-67:                                               ; preds = %72
-  %68 = add i64 %74, 1
-  %69 = getelementptr inbounds i8, ptr %26, i64 %68
-  %70 = load i8, ptr %69, align 1, !tbaa !13
-  %71 = icmp eq i8 %70, 0
-  br i1 %71, label %77, label %72, !llvm.loop !19
+69:                                               ; preds = %61, %64
+  %70 = phi i8 [ %67, %64 ], [ %62, %61 ]
+  %71 = phi i64 [ %65, %64 ], [ 0, %61 ]
+  %72 = add i8 %70, -65
+  %73 = icmp ult i8 %72, 26
+  br i1 %73, label %124, label %64
 
-72:                                               ; preds = %63, %67
-  %73 = phi i8 [ %70, %67 ], [ %65, %63 ]
-  %74 = phi i64 [ %68, %67 ], [ 0, %63 ]
-  %75 = add i8 %73, -65
-  %76 = icmp ult i8 %75, 26
-  br i1 %76, label %130, label %67
+74:                                               ; preds = %64, %61
+  %75 = load ptr, ptr %1, align 8, !tbaa !11
+  %76 = icmp eq ptr %75, null
+  br i1 %76, label %124, label %77
 
-77:                                               ; preds = %67, %63
-  %78 = load ptr, ptr %1, align 8, !tbaa !11
-  %79 = icmp eq ptr %78, null
-  br i1 %79, label %130, label %80
+77:                                               ; preds = %74
+  %78 = load i8, ptr %75, align 1, !tbaa !13
+  %79 = icmp eq i8 %78, 0
+  br i1 %79, label %89, label %80
 
-80:                                               ; preds = %77
-  %81 = load i8, ptr %78, align 1, !tbaa !13
-  %82 = icmp eq i8 %81, 0
-  br i1 %82, label %92, label %83
+80:                                               ; preds = %77, %80
+  %81 = phi i32 [ %84, %80 ], [ 0, %77 ]
+  %82 = phi ptr [ %83, %80 ], [ %75, %77 ]
+  %83 = getelementptr inbounds i8, ptr %82, i64 1
+  %84 = add nuw nsw i32 %81, 1
+  %85 = load i8, ptr %83, align 1, !tbaa !13
+  %86 = icmp eq i8 %85, 0
+  br i1 %86, label %87, label %80, !llvm.loop !17
 
-83:                                               ; preds = %80, %83
-  %84 = phi i32 [ %87, %83 ], [ 0, %80 ]
-  %85 = phi ptr [ %86, %83 ], [ %78, %80 ]
-  %86 = getelementptr inbounds i8, ptr %85, i64 1
-  %87 = add nuw nsw i32 %84, 1
-  %88 = load i8, ptr %86, align 1, !tbaa !13
-  %89 = icmp eq i8 %88, 0
-  br i1 %89, label %90, label %83, !llvm.loop !17
+87:                                               ; preds = %80
+  %88 = zext nneg i32 %84 to i64
+  br label %89
 
-90:                                               ; preds = %83
-  %91 = zext nneg i32 %87 to i64
-  br label %92
+89:                                               ; preds = %87, %77
+  %90 = phi i64 [ 0, %77 ], [ %88, %87 ]
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 16 %29, ptr nonnull readonly align 1 %75, i64 %90, i1 false)
+  %91 = getelementptr inbounds i8, ptr %29, i64 %90
+  store i8 0, ptr %91, align 1, !tbaa !13
+  %92 = load i8, ptr %29, align 16, !tbaa !13
+  %93 = icmp eq i8 %92, 0
+  br i1 %93, label %106, label %94
 
-92:                                               ; preds = %90, %80
-  %93 = phi i64 [ 0, %80 ], [ %91, %90 ]
-  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 16 %29, ptr nonnull readonly align 1 %78, i64 %93, i1 false)
-  %94 = getelementptr inbounds i8, ptr %29, i64 %93
-  store i8 0, ptr %94, align 1, !tbaa !13
-  %95 = load i8, ptr %29, align 16, !tbaa !13
-  %96 = icmp eq i8 %95, 0
-  br i1 %96, label %111, label %97
+94:                                               ; preds = %89, %94
+  %95 = phi i64 [ %102, %94 ], [ 0, %89 ]
+  %96 = phi i8 [ %104, %94 ], [ %92, %89 ]
+  %97 = getelementptr inbounds i8, ptr %29, i64 %95
+  %98 = add i8 %96, -65
+  %99 = icmp ult i8 %98, 26
+  %100 = or disjoint i8 %96, 32
+  %101 = select i1 %99, i8 %100, i8 %96
+  store i8 %101, ptr %97, align 1, !tbaa !13
+  %102 = add nuw nsw i64 %95, 1
+  %103 = getelementptr inbounds i8, ptr %29, i64 %102
+  %104 = load i8, ptr %103, align 1, !tbaa !13
+  %105 = icmp eq i8 %104, 0
+  br i1 %105, label %106, label %94, !llvm.loop !21
 
-97:                                               ; preds = %92, %97
-  %98 = phi i64 [ %105, %97 ], [ 0, %92 ]
-  %99 = phi i8 [ %107, %97 ], [ %95, %92 ]
-  %100 = getelementptr inbounds i8, ptr %29, i64 %98
-  %101 = add i8 %99, -65
-  %102 = icmp ult i8 %101, 26
-  %103 = or disjoint i8 %99, 32
-  %104 = select i1 %102, i8 %103, i8 %99
-  store i8 %104, ptr %100, align 1, !tbaa !13
-  %105 = add nuw nsw i64 %98, 1
-  %106 = getelementptr inbounds i8, ptr %29, i64 %105
-  %107 = load i8, ptr %106, align 1, !tbaa !13
+106:                                              ; preds = %94, %89
+  %107 = load i8, ptr %29, align 16, !tbaa !13
   %108 = icmp eq i8 %107, 0
-  br i1 %108, label %109, label %97, !llvm.loop !21
+  br i1 %108, label %119, label %114
 
-109:                                              ; preds = %97
-  %110 = getelementptr inbounds i8, ptr %29, i64 %105
-  br label %111
+109:                                              ; preds = %114
+  %110 = add i64 %116, 1
+  %111 = getelementptr inbounds i8, ptr %29, i64 %110
+  %112 = load i8, ptr %111, align 1, !tbaa !13
+  %113 = icmp eq i8 %112, 0
+  br i1 %113, label %119, label %114, !llvm.loop !19
 
-111:                                              ; preds = %109, %92
-  %112 = phi ptr [ %29, %92 ], [ %110, %109 ]
-  store i8 0, ptr %112, align 1, !tbaa !13
-  %113 = load i8, ptr %29, align 16, !tbaa !13
-  %114 = icmp eq i8 %113, 0
-  br i1 %114, label %125, label %120
+114:                                              ; preds = %106, %109
+  %115 = phi i8 [ %112, %109 ], [ %107, %106 ]
+  %116 = phi i64 [ %110, %109 ], [ 0, %106 ]
+  %117 = add i8 %115, -65
+  %118 = icmp ult i8 %117, 26
+  br i1 %118, label %124, label %109
 
-115:                                              ; preds = %120
-  %116 = add i64 %122, 1
-  %117 = getelementptr inbounds i8, ptr %29, i64 %116
-  %118 = load i8, ptr %117, align 1, !tbaa !13
-  %119 = icmp eq i8 %118, 0
-  br i1 %119, label %125, label %120, !llvm.loop !19
+119:                                              ; preds = %109, %106
+  %120 = load i64, ptr %12, align 8, !tbaa !12
+  %121 = call i32 @bcmp(ptr nonnull %26, ptr nonnull %29, i64 %120)
+  %122 = icmp eq i32 %121, 0
+  %123 = select i1 %122, i32 0, i32 -13
+  br label %124
 
-120:                                              ; preds = %111, %115
-  %121 = phi i8 [ %118, %115 ], [ %113, %111 ]
-  %122 = phi i64 [ %116, %115 ], [ 0, %111 ]
-  %123 = add i8 %121, -65
-  %124 = icmp ult i8 %123, 26
-  br i1 %124, label %130, label %115
-
-125:                                              ; preds = %115, %111
-  %126 = load i64, ptr %12, align 8, !tbaa !12
-  %127 = call i32 @bcmp(ptr nonnull %26, ptr nonnull %29, i64 %126)
-  %128 = icmp eq i32 %127, 0
-  %129 = select i1 %128, i32 0, i32 -13
-  br label %130
-
-130:                                              ; preds = %72, %120, %77, %23, %125
-  %131 = phi i32 [ %129, %125 ], [ -14, %23 ], [ -14, %77 ], [ -14, %120 ], [ -14, %72 ]
+124:                                              ; preds = %69, %114, %74, %23, %119
+  %125 = phi i32 [ %123, %119 ], [ -14, %23 ], [ -14, %74 ], [ -14, %114 ], [ -14, %69 ]
   tail call void @llvm.stackrestore.p0(ptr %25)
-  br label %132
+  br label %126
 
-132:                                              ; preds = %11, %3, %5, %8, %130, %19
-  %133 = phi i32 [ %22, %19 ], [ %131, %130 ], [ -4, %8 ], [ -4, %5 ], [ -4, %3 ], [ -13, %11 ]
-  ret i32 %133
+126:                                              ; preds = %11, %3, %5, %8, %124, %19
+  %127 = phi i32 [ %22, %19 ], [ %125, %124 ], [ -4, %8 ], [ -4, %5 ], [ -4, %3 ], [ -13, %11 ]
+  ret i32 %127
 }
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn
@@ -793,27 +775,6 @@ define dso_local range(i32 -6, 18) i32 @findchar(ptr noundef readonly %0, i8 nou
 47:                                               ; preds = %46, %43, %4
   %48 = phi i32 [ -6, %4 ], [ 0, %46 ], [ 17, %43 ]
   ret i32 %48
-}
-
-; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none) uwtable
-define dso_local range(i32 -4, 1) i32 @exportdyntobuff(ptr noundef readonly %0, ptr nocapture noundef writeonly %1) local_unnamed_addr #8 {
-  %3 = icmp eq ptr %0, null
-  br i1 %3, label %10, label %4
-
-4:                                                ; preds = %2
-  %5 = load ptr, ptr %0, align 8, !tbaa !11
-  %6 = icmp eq ptr %5, null
-  br i1 %6, label %10, label %7
-
-7:                                                ; preds = %4
-  %8 = getelementptr inbounds i8, ptr %0, i64 8
-  %9 = load i64, ptr %8, align 8, !tbaa !12
-  tail call void @llvm.memcpy.p0.p0.i64(ptr align 1 %1, ptr nonnull align 1 %5, i64 %9, i1 false)
-  br label %10
-
-10:                                               ; preds = %2, %4, %7
-  %11 = phi i32 [ 0, %7 ], [ -4, %4 ], [ -4, %2 ]
-  ret i32 %11
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none) uwtable
