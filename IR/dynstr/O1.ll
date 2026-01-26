@@ -708,65 +708,66 @@ declare void @llvm.stackrestore.p0(ptr) #12
 
 ; Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite) uwtable
 define dso_local range(i32 -6, 18) i32 @findchar(ptr noundef readonly %0, i8 noundef signext %1, i32 noundef %2, ptr nocapture noundef writeonly %3) local_unnamed_addr #13 {
-  %5 = icmp eq ptr %0, null
+  ; (%0 : str), (%1 : char), (%2 : sensitivity), (%3 : *count)
+  %5 = icmp eq ptr %0, null       ; !str
   br i1 %5, label %47, label %6
 
 6:                                                ; preds = %4
-  %7 = icmp eq i32 %2, 0
-  %8 = load i8, ptr %0, align 1, !tbaa !13
-  %9 = icmp eq i8 %8, 0
-  br i1 %7, label %16, label %10
+  %7 = icmp eq i32 %2, 0    ; sensitivity == 0
+  %8 = load i8, ptr %0, align 1, !tbaa !13    ; str[0]
+  %9 = icmp eq i8 %8, 0     ; str[0] =='\0'
+  br i1 %7, label %16, label %10    ; decision on sensitivity
 
-10:                                               ; preds = %6
-  br i1 %9, label %43, label %11
+10:          ; if sensitivity!=0                  ; preds = %6
+  br i1 %9, label %43, label %11    ; if the str is empty (str[0] == '\0'), branch to %43 where *count=occ=0, otherwise, go with the flow
 
-11:                                               ; preds = %10
-  %12 = add i8 %1, -65
-  %13 = icmp ult i8 %12, 26
-  %14 = or disjoint i8 %1, 32
-  %15 = select i1 %13, i8 %14, i8 %1
+11:         ; char2lcase inlined                  ; preds = %10
+  %12 = add i8 %1, -65          ; ascii_dec(char) - 65
+  %13 = icmp ult i8 %12, 26     ; %12 in [0, 26)
+  %14 = or disjoint i8 %1, 32   ; Turn the 6th bit (mag:32) ON
+  %15 = select i1 %13, i8 %14, i8 %1    ; choose the correct value of character after transformation
   br label %17
 
-16:                                               ; preds = %6
-  br i1 %9, label %43, label %32
+16:           ; if sensitivity==0                 ; preds = %6
+  br i1 %9, label %43, label %32    ; if the str is empty (str[0] == '\0'), branch to %43 where *count=occ=0, otherwise, go with the flow
 
-17:                                               ; preds = %11, %17
-  %18 = phi i64 [ 0, %11 ], [ %28, %17 ]
-  %19 = phi i8 [ %8, %11 ], [ %30, %17 ]
-  %20 = phi i32 [ 0, %11 ], [ %27, %17 ]
-  %21 = add i8 %19, -65
-  %22 = icmp ult i8 %21, 26
-  %23 = or disjoint i8 %19, 32
-  %24 = select i1 %22, i8 %23, i8 %19
-  %25 = icmp eq i8 %24, %15
-  %26 = zext i1 %25 to i32
-  %27 = add nuw nsw i32 %20, %26
-  %28 = add nuw nsw i64 %18, 1
-  %29 = getelementptr inbounds i8, ptr %0, i64 %28
-  %30 = load i8, ptr %29, align 1, !tbaa !13
-  %31 = icmp eq i8 %30, 0
+17:         ; sensitive check loop                ; preds = %11, %17
+  %18 = phi i64 [ 0, %11 ], [ %28, %17 ]    ; i=0 (init val)
+  %19 = phi i8 [ %8, %11 ], [ %30, %17 ]    ; c=str[0](init val)
+  %20 = phi i32 [ 0, %11 ], [ %27, %17 ]    ; occ=0 (init val)
+  %21 = add i8 %19, -65       ; c-65
+  %22 = icmp ult i8 %21, 26   ; %21 in [0, 26)
+  %23 = or disjoint i8 %19, 32    ; Turn the 6th bit (mag: 32) ON
+  %24 = select i1 %22, i8 %23, i8 %19   ; choose the correct value of character after transformation
+  %25 = icmp eq i8 %24, %15   ; char2lcase(str[.]) == char2lcase(char)
+  %26 = zext i1 %25 to i32    ; zero extend %25 to 32-bit
+  %27 = add nuw nsw i32 %20, %26  ; occ += %26 (or occ++) ; Clever. Since occ++ requires a decision, clang avoids it by adding the result of the decision itself.
+  %28 = add nuw nsw i64 %18, 1    ; i++
+  %29 = getelementptr inbounds i8, ptr %0, i64 %28    ; &str[%28] or &str[i]
+  %30 = load i8, ptr %29, align 1, !tbaa !13    ; str[i]
+  %31 = icmp eq i8 %30, 0   ; str[i] == '\0'
   br i1 %31, label %43, label %17, !llvm.loop !23
 
-32:                                               ; preds = %16, %32
-  %33 = phi i64 [ %39, %32 ], [ 0, %16 ]
-  %34 = phi i8 [ %41, %32 ], [ %8, %16 ]
-  %35 = phi i32 [ %38, %32 ], [ 0, %16 ]
-  %36 = icmp eq i8 %34, %1
-  %37 = zext i1 %36 to i32
-  %38 = add nuw nsw i32 %35, %37
-  %39 = add nuw nsw i64 %33, 1
-  %40 = getelementptr inbounds i8, ptr %0, i64 %39
-  %41 = load i8, ptr %40, align 1, !tbaa !13
-  %42 = icmp eq i8 %41, 0
+32:        ; insensitive check loop               ; preds = %16, %32
+  %33 = phi i64 [ %39, %32 ], [ 0, %16 ]    ; i=0 (init val)
+  %34 = phi i8 [ %41, %32 ], [ %8, %16 ]    ; str[0] (init val)
+  %35 = phi i32 [ %38, %32 ], [ 0, %16 ]    ; occ=0 (init val)
+  %36 = icmp eq i8 %34, %1    ; str[0] = char
+  %37 = zext i1 %36 to i32    ; zero-extend %36 to 32-bit
+  %38 = add nuw nsw i32 %35, %37    ; occ += %36 (or occ++)
+  %39 = add nuw nsw i64 %33, 1    ; i++
+  %40 = getelementptr inbounds i8, ptr %0, i64 %39    ; &str[%39] or &str[i]
+  %41 = load i8, ptr %40, align 1, !tbaa !13    ; str[i]
+  %42 = icmp eq i8 %41, 0       ; str[i] == '\0'
   br i1 %42, label %43, label %32, !llvm.loop !24
 
 43:                                               ; preds = %17, %32, %10, %16
-  %44 = phi i32 [ 0, %16 ], [ 0, %10 ], [ %38, %32 ], [ %27, %17 ]
-  %45 = icmp eq i32 %44, 0
+  %44 = phi i32 [ 0, %16 ], [ 0, %10 ], [ %38, %32 ], [ %27, %17 ]    ; occ
+  %45 = icmp eq i32 %44, 0        ; !occ
   br i1 %45, label %47, label %46
 
 46:                                               ; preds = %43
-  store i32 %44, ptr %3, align 4, !tbaa !25
+  store i32 %44, ptr %3, align 4, !tbaa !25     ; *count=occ
   br label %47
 
 47:                                               ; preds = %46, %43, %4
@@ -776,18 +777,18 @@ define dso_local range(i32 -6, 18) i32 @findchar(ptr noundef readonly %0, i8 nou
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none) uwtable
 define dso_local range(i32 -4, 1) i32 @clearStr(ptr noundef %0) local_unnamed_addr #14 {
-  %2 = icmp eq ptr %0, null
+  %2 = icmp eq ptr %0, null     ; !str
   br i1 %2, label %8, label %3
 
 3:                                                ; preds = %1
-  %4 = load ptr, ptr %0, align 8, !tbaa !11
-  %5 = icmp eq ptr %4, null
+  %4 = load ptr, ptr %0, align 8, !tbaa !11   ; str.data
+  %5 = icmp eq ptr %4, null     ; !str.data
   br i1 %5, label %8, label %6
 
 6:                                                ; preds = %3
-  %7 = getelementptr inbounds i8, ptr %0, i64 8
-  store i64 0, ptr %7, align 8, !tbaa !12
-  store i8 0, ptr %4, align 1, !tbaa !13
+  %7 = getelementptr inbounds i8, ptr %0, i64 8   ; &str.len
+  store i64 0, ptr %7, align 8, !tbaa !12   ; str.len = 0
+  store i8 0, ptr %4, align 1, !tbaa !13    ; str.data[0] = '\0'
   br label %8
 
 8:                                                ; preds = %6, %1, %3

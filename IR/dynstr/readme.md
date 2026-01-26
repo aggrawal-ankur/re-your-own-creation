@@ -363,3 +363,215 @@ Based on the above understanding, cmp2strs make perfect sense because `and` is h
 ---
 
 Locked in, finished in one go.
+
+### findchar()
+
+findchar() is the first function where I faced a completely different challenge. The logic is clear. What we are doing is clear. Why we are doing it is clear too. What's not clear is where this piece of IR aligns with the source code.
+
+It started simple, but instantly evolved into a form which is nothing but perplexing. I keep wondering why it is actually required. That's the reason why I actively annotate the IR. Because that's the only way to preserve understanding and the feeling I had when I understood the parts and the whole thing in the end.
+
+I didn't understood this function linearly. I explored it linearly but a lot of questions were answered after I've passed through them.
+
+---
+
+Block 4 starts normally, then block 6 comes.
+
+Block 6 branches based on sensitivity being 0 or not. 0 means sensitive and anything else is insensitive. This is perfectly fine. What's not fine is the branch it branches to if sensitivity is not 0.
+```
+6:                                                ; preds = %4
+  %7 = icmp eq i32 %2, 0    ; sensitivity == 0
+  %8 = load i8, ptr %0, align 1, !tbaa !13    ; str[0]
+  %9 = icmp eq i8 %8, 0     ; str[0] =='\0'
+  br i1 %7, label %16, label %10    ; decision on sensitivity
+
+10:          ; if sensitivity!=0                  ; preds = %6
+  br i1 %9, label %43, label %11    ; if the str is empty (str[0] == '\0'), branch to %43 where *count=occ=0, otherwise, go with the flow
+```
+
+Branch 10 is basically a kind of traffic-router. We have checked if the string is not empty. If it is, we branch to %43. Sound simple in retrospection, but when you look at what block 43 is, you'll feel uneasy.
+```
+43:                                               ; preds = %17, %32, %10, %16
+  %44 = phi i32 [ 0, %16 ], [ 0, %10 ], [ %38, %32 ], [ %27, %17 ]    ; occ
+  %45 = icmp eq i32 %44, 0        ; !occ
+  br i1 %45, label %47, label %46
+
+46:                                               ; preds = %43
+  store i32 %44, ptr %3, align 4, !tbaa !25     ; *count=occ
+  br label %47
+
+47:                                               ; preds = %46, %43, %4
+  %48 = phi i32 [ -6, %4 ], [ 0, %46 ], [ 17, %43 ]
+  ret i32 %48
+}
+```
+It is simply not possible to comprehend what is happening in first glance.
+
+Then the code for sensitive check comes, where char2lcase is inlined. And there you go:
+```
+16:           ; if sensitivity==0                 ; preds = %6
+  br i1 %9, label %43, label %32    ; if the str is empty (str[0] == '\0'), branch to %43 where *count=occ=0, otherwise, go with the flow
+```
+Honestly, this kind of stuff is a little disturbing for the first time.
+
+Next comes the code for insensitive check.
+
+While I was exploring the case sensitive loop, I saw this:
+```
+17:         ; sensitive check loop                ; preds = %11, %17
+  %18 = phi i64 [ 0, %11 ], [ %28, %17 ]    ; i=0 (init val)
+  %19 = phi i8 [ %8, %11 ], [ %30, %17 ]    ; c=str[0](init val)
+  %20 = phi i32 [ 0, %11 ], [ %27, %17 ]    ; occ=0 (init val)
+  .
+  .
+```
+What makes this thing disturbing is the value of %18 and %19. They both have the same value, 0. Now which one is the loop iterator and which one is the occurrence count? %18 is problematic for one more reason. Both i and occ are declared as `int`, so I am expecting i32 for both, which is not true here. Why?
+
+Have a look at this part in block 17 now:
+```
+17:
+  ..
+  %27 = add nuw nsw i32 %20, %26  ; occ += %26 (or occ++) ; Clever. Since occ++ requires a decision, clang avoids it by adding the result of the decision itself.
+  %28 = add nuw nsw i64 %18, 1    ; i++
+  ..
+```
+Two additions, one for for `i` and the other for `occ`. But which one is which? This is quite-simple. %28 is `i`. But %27 is a little different. We want occ to be incremented if the characters match, like this:
+```c
+for (int i = 0; str[i] != '\0'; i++){
+  if (char2lcase(str[i]) == char2lcase(c))
+    occ++;
+```
+%26 is a zero-extended to i32 value, where %25 was zero-extended. This is %25:
+```
+%25 = icmp eq i8 %24, %15   ; char2lcase(str[.]) == char2lcase(char)
+```
+%25 is the result of a comparison.
+
+That's when I was really smiling, because it clicked. See, to evaluate the if block, you must use a branch, or something based on `select`, like:
+```
+select i1 %26, i64 1, i64 0
+```
+Both branch and select are (1) extra piece of IR, (2) decision-evaluators. We can skip this if we directly add the result to `occ`. If it was 0, the state of `occ` will remain unaffected. Otherwise, it will be incremented by 1. That's such a clever trick.
+
+The same trick is also used in the case insensitive block.
+
+One thing which is kind of obvious but can sometimes create confusion is *why we are checking each character is null*, because that's the loop condition. Often, the whole focus is shifted to the if-block, and the idea that the character must not be null before we do anything else is slipped to the bottom. I have circled around this a lot, which is why I mentioned this.
+
+---
+
+First of all, everything I've written about this function is written in retrospection. My understanding of everything was kind of different this time. Few things are purely instantaneous, they didn't existed before.
+
+But one question still remains. Why `i` is declared an i64 when I declared it as an i32? This is still a question. When I opened the IR, I didn't even got time to look at it and I had a theory in my mind, which I am going to to test now.
+
+And it is true.
+
+The theory was that `i` was used in dereferencing a pointer, and pointers work in 64-bit only, so maybe `i` needs to be in 64-bit as well. That's why I went on testing it.
+
+I started with a normal for-loop:
+```c
+int main(void){
+  for (int i = 0; i < 5; i++){
+    printf("i: %d\n", i);
+  }
+}
+```
+This is the -O1 IR:
+```
+1:                                                ; preds = %2
+  ret i32 0
+
+2:                                                ; preds = %0, %2
+  %3 = phi i32 [ 0, %0 ], [ %5, %2 ]
+  %4 = tail call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str, i32 noundef %3)
+  %5 = add nuw nsw i32 %3, 1
+  %6 = icmp eq i32 %5, 5
+  br i1 %6, label %1, label %2, !llvm.loop !5
+```
+I know there is some special stuff. `icmp` is not matching against `\0`, but the length of the string. Well, the string length is known and it is always a better factor than matching against the null-terminator. I am sure -O0 will have nul-terminator in icmp.
+
+Now a buffer:
+```c
+int main(void){
+  char buff[] = "my name is anna!";
+  for (int i = 0; buff[i] != '\0'; i++){
+    printf("i: %d\n", i);
+  }
+}
+```
+This is the -O1 IR:
+```
+2:                                                ; preds = %0, %2
+  %3 = phi i64 [ 0, %0 ], [ %9, %2 ]
+  %4 = getelementptr inbounds [17 x i8], ptr @__const.main.buff, i64 0, i64 %3
+  %5 = load i8, ptr %4, align 1, !tbaa !5
+  %6 = sext i8 %5 to i32
+  %7 = trunc nuw nsw i64 %3 to i32
+  %8 = tail call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str, i32 noundef %7, i32 noundef %6)
+  %9 = add nuw nsw i64 %3, 1
+  %10 = icmp eq i64 %9, 16
+  br i1 %10, label %1, label %2, !llvm.loop !8
+```
+
+Now this one:
+```c
+int main(void){
+  char *buff = "my name is anna!";
+  for (int i = 0; buff[i] != '\0'; i++){
+    printf("i: %d\n", i);
+  }
+}
+```
+This is the -O1 IR:
+```
+2:                                                ; preds = %0, %2
+  %3 = phi i64 [ 0, %0 ], [ %8, %2 ]
+  %4 = phi i8 [ 109, %0 ], [ %10, %2 ]
+  %5 = sext i8 %4 to i32
+  %6 = trunc nuw nsw i64 %3 to i32
+  %7 = tail call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.1, i32 noundef %6, i32 noundef %5)
+  %8 = add nuw nsw i64 %3, 1
+  %9 = getelementptr inbounds i8, ptr @.str, i64 %8
+  %10 = load i8, ptr %9, align 1, !tbaa !5
+  %11 = icmp eq i64 %8, 16
+  br i1 %11, label %1, label %2, !llvm.loop !8
+```
+
+And this proves my point. Since `buff` is a ptr and `i` involves in pointer arithmetic (`*(base + i)`), it must be an i64. Notice we are truncating `i` to i32 so that it can be consumed by printf.
+
+---
+
+*I ran into a confusion which led me question if this is correct or not. So I have to dig more, which proved that the confusion spawned from a mistake and the initial idea still holds true. But in that process, I found my mental model of pointers and arrays a little distorted, so I am sharing the correction that I've made.*
+
+---
+
+Declaring a pointer.
+```c
+char *buff
+char* buff
+```
+Even though both the things are the same thing, the second one is more precise and removes all the confusions. I have seen a few people talking about it and I am transitioning to the second one already.
+
+---
+
+These are not the same things.
+```c
+char  buff1[]
+char* buff2
+```
+
+`buff1` is an array object and `buff2` is a pointer object.
+
+Even though `buff1` decays to a pointer (*known as array-to-pointer decay*), it is a property of an array. That doesn't make `buff1 == buff2`. `buff2` is just a pointer to a character type value.
+
+An array carries semantic information like size. A pointer doesn't. When an array decays into a pointer, that information is lost.
+
+When we traverse through an array of elements, the iterator (*or the induction variable*) is like an offset in that array.
+
+A pointer only points to a memory. *Pointer arithmetic* is only a property of pointers. It is not guaranteed that the pointer points to a contiguous memory block, such that incremental memory access is defined.
+
+A character-type pointer only points to a memory which holds a character. It is not guaranteed that incremental memory access from that point in memory would be defined.
+
+On the other hand, a buffer like `buff1` guarantees that incremental memory access is defined, based on the formula `base + i*sizeof(type)`.
+
+---
+
+All in all, this function, despite being simple in control flow, revealed a lot of strange things.
