@@ -1,0 +1,10 @@
+List of important virtual registers
+*---------------------------------*
+
+%0 -> str -> "Main String"    -> Haystack
+%1 -> pat -> "Pattern String" -> Needle
+%2 -> kmp_obj -> "The Result Object"
+
+%18 -> str_len
+%28 -> pat_len
+

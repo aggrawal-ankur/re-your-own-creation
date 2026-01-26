@@ -822,38 +822,38 @@ declare void @free(ptr allocptr nocapture noundef) local_unnamed_addr #16
 
 ; Function Attrs: nofree norecurse nosync nounwind uwtable
 define dso_local noundef i32 @kmp_search(ptr noundef readonly %0, ptr noundef readonly %1, ptr nocapture noundef %2) local_unnamed_addr #17 {
-  %4 = icmp ne ptr %0, null
-  %5 = icmp ne ptr %1, null
+  %4 = icmp ne ptr %0, null   ; !str
+  %5 = icmp ne ptr %1, null   ; !pat
   %6 = and i1 %4, %5
   br i1 %6, label %7, label %115
 
 7:                                                ; preds = %3
-  %8 = load i8, ptr %0, align 1, !tbaa !13
-  %9 = icmp eq i8 %8, 0
+  %8 = load i8, ptr %0, align 1, !tbaa !13    ; str[0]
+  %9 = icmp eq i8 %8, 0   ; str[0] != '\0'
   br i1 %9, label %17, label %10
 
-10:                                               ; preds = %7, %10
-  %11 = phi i32 [ %14, %10 ], [ 0, %7 ]
-  %12 = phi ptr [ %13, %10 ], [ %0, %7 ]
-  %13 = getelementptr inbounds i8, ptr %12, i64 1
-  %14 = add nuw nsw i32 %11, 1
-  %15 = load i8, ptr %13, align 1, !tbaa !13
-  %16 = icmp eq i8 %15, 0
+10:            ; lenstr(str) inlined              ; preds = %7, %10
+  %11 = phi i32 [ %14, %10 ], [ 0, %7 ]     ; len=0 (init val)
+  %12 = phi ptr [ %13, %10 ], [ %0, %7 ]    ; ptr=str[0] (init val)
+  %13 = getelementptr inbounds i8, ptr %12, i64 1   ; &str[..+1]
+  %14 = add nuw nsw i32 %11, 1    ; len++
+  %15 = load i8, ptr %13, align 1, !tbaa !13    ; str[..+1]
+  %16 = icmp eq i8 %15, 0   ; str[..+1] == '\0'
   br i1 %16, label %17, label %10, !llvm.loop !17
 
 17:                                               ; preds = %10, %7
   %18 = phi i32 [ 0, %7 ], [ %14, %10 ]
-  %19 = load i8, ptr %1, align 1, !tbaa !13
-  %20 = icmp eq i8 %19, 0
+  %19 = load i8, ptr %1, align 1, !tbaa !13    ; pat[0]
+  %20 = icmp eq i8 %19, 0    ; pat[0] != '\0'
   br i1 %20, label %28, label %21
 
-21:                                               ; preds = %17, %21
-  %22 = phi i32 [ %25, %21 ], [ 0, %17 ]
-  %23 = phi ptr [ %24, %21 ], [ %1, %17 ]
-  %24 = getelementptr inbounds i8, ptr %23, i64 1
-  %25 = add nuw nsw i32 %22, 1
-  %26 = load i8, ptr %24, align 1, !tbaa !13
-  %27 = icmp eq i8 %26, 0
+21:            ; lenstr(pat) inlined              ; preds = %17, %21
+  %22 = phi i32 [ %25, %21 ], [ 0, %17 ]     ; len=0 (init val)
+  %23 = phi ptr [ %24, %21 ], [ %1, %17 ]    ; ptr=pat[0] (init val)
+  %24 = getelementptr inbounds i8, ptr %23, i64 1   ; &pat[..+1]
+  %25 = add nuw nsw i32 %22, 1    ; len++
+  %26 = load i8, ptr %24, align 1, !tbaa !13  ; pat[..+1]
+  %27 = icmp eq i8 %26, 0   ; pat[..+1] == '\0'
   br i1 %27, label %28, label %21, !llvm.loop !17
 
 28:                                               ; preds = %21, %17

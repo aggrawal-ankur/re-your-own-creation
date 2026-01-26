@@ -632,3 +632,68 @@ findChar() is almost identical with one different branch, same as above. This ti
 Everything identical has been filtered. Now I'll explore the kmp-implementation.
 
 ## Knuth Morris Pratt (KMP) Algorithm
+
+I have a weird feeling which I want to say here.
+
+I don't remember how KMP works. It has been more than a month when I completed dynstr.c and I don't remember the KMP part anymore.
+
+Now the ideal way to approach the IR is to revisit the C-source first and understand how I've implemented it. After that, I can think about the reading the IR.
+
+But I have a feeling that reading the IR will help me understand KMP better than the source. I feel like the IR has already done the difficult job of breaking the algorithm in atomic steps, and that should make it easy to understand it.
+
+Since it is my first time exploring an algorithm from a different angle, I'll go easy and skim through the C-source once.
+
+---
+
+We have 2 functions: `kmp_build_lps()` and `kmp_search()`. Since kmp_build_lps is a `static inline` fn, -O1 doesn't have it. I don't want to explore the -O0, because it is huge. It will dry me easily. There are already too many variables and it'll confuse me easily.
+
+I am choosing -O1. If I incur into issues and -O1 feels too optimized, I'll switch to -O0.
+
+### First Impression
+
+It is spanned across 178 lines (824-1002). Blocks are decently sized. The length is definitely not overwhelming. What I do anticipate is how kmp_build_lps would be inlined here.
+
+---
+
+That's our fn:
+```c
+DynStrStatus kmp_search(const char* str, const char* pat, kmp_result* kmp_obj)
+```
+
+This is the kmp_result struct:
+```c
+typedef struct {
+  size_t  count;
+  size_t* indices;
+} kmp_result;
+```
+
+%0 -> str -> "Main String"    -> Haystack
+%1 -> pat -> "Pattern String" -> Needle
+%2 -> kmp_obj -> "The Result Object"
+
+---
+
+Since strings are different, it is using `ne` with `and`, instead of branching. In case of false, it branch to %115 directly, which is the last block with 2 lines, which means, it is straight with no middle complexities as faced in the previous few functions.
+
+Block 7 checks `str[0] != '\0'`, followed by a decently long block (10) with phi-nodes deciding on an i32 and a ptr, and a branch that calls itself. That's a loop.
+
+The i32 must be the induction variable (the iterator) and the ptr must be `str`. But the i32 can be a length count as well, because the length of these strings is not known and if it were the induction variable, the GEP must be consuming it, which it is not doing.
+```
+%13 = getelementptr inbounds i8, ptr %12, i64 1
+```
+This GEP matches the semantics of `str++`.
+
+Final assumption: %11 is the length of `str` and %12 is the pointer to traverse in `str`.
+
+**Block 10: lenstr(str) inlined; confirmed.**
+
+Block 17 decides on the value of length and continues the same for `pat`.
+
+**Block 21: lenstr(pat) inlined; confirmed.**
+
+Block 18 decides on the value of length for `pat`. It then checks if `pat_len > str_len`, in which case, it branches to %115; else %31.
+
+---
+
+Before it gets complicated, it'd be nice if I note important virtual registers somewhere. I'll not mess up the readme. I'll note them somewhere else and paste them later in the end.
