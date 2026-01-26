@@ -370,7 +370,7 @@ define dso_local range(i32 -10, 1) i32 @isucase(ptr noundef readonly %0) local_u
 ; Function Attrs: nofree norecurse nosync nounwind memory(readwrite, inaccessiblemem: none) uwtable
 define dso_local noundef i32 @tolcase(ptr noundef readonly %0, ptr nocapture noundef %1) local_unnamed_addr #11 {
   %3 = icmp eq ptr %0, null     ; !str
-  br i1 %3, label %49, label %4
+  br i1 %3, label %46, label %4
 
 4:                                                ; preds = %2
   %5 = load i8, ptr %0, align 1, !tbaa !13    ; str[0]
@@ -397,7 +397,7 @@ define dso_local noundef i32 @tolcase(ptr noundef readonly %0, ptr nocapture nou
   store i8 0, ptr %18, align 1, !tbaa !13     ; lcase[len] = '\0'
   %19 = load i8, ptr %1, align 1, !tbaa !13   ; lcase[0]
   %20 = icmp eq i8 %19, 0         ; lcase[0] = '\0'
-  br i1 %20, label %35, label %21
+  br i1 %20, label %46, label %21
 
 21:          ; char2lcase inlined                 ; preds = %16, %21
   %22 = phi i64 [ %29, %21 ], [ 0, %16 ]       ; i=0 (init val)
@@ -441,7 +441,7 @@ define dso_local noundef i32 @tolcase(ptr noundef readonly %0, ptr nocapture nou
 ; Function Attrs: nofree norecurse nosync nounwind memory(readwrite, inaccessiblemem: none) uwtable
 define dso_local noundef i32 @toucase(ptr noundef readonly %0, ptr nocapture noundef %1) local_unnamed_addr #11 {
   %3 = icmp eq ptr %0, null       ; !str
-  br i1 %3, label %49, label %4
+  br i1 %3, label %46, label %4
 
 4:                                                ; preds = %2
   %5 = load i8, ptr %0, align 1, !tbaa !13    ; str[0]
@@ -581,7 +581,7 @@ define dso_local range(i32 -14, 1) i32 @cmp2strs(ptr noundef readonly %0, ptr no
   store i8 0, ptr %48, align 1, !tbaa !13       ; tmp1[len] = '\0'
   %49 = load i8, ptr %28, align 16, !tbaa !13   ; tmp1[0]
   %50 = icmp eq i8 %49, 0     ; tmp1[0] == '\0'
-  br i1 %50, label %63, label %51
+  br i1 %50, label %76, label %51
 
 51:            ; char2lcase loop inlined          ; preds = %46, %51
   %52 = phi i64 [ %59, %51 ], [ 0, %46 ]     ; i=0 (init val)
@@ -798,18 +798,18 @@ define dso_local range(i32 -4, 1) i32 @clearStr(ptr noundef %0) local_unnamed_ad
 
 ; Function Attrs: mustprogress nounwind willreturn uwtable
 define dso_local range(i32 -4, 1) i32 @freeStr(ptr noundef %0) local_unnamed_addr #15 {
-  %2 = icmp eq ptr %0, null
+  %2 = icmp eq ptr %0, null     ; !str
   br i1 %2, label %8, label %3
 
 3:                                                ; preds = %1
-  %4 = load ptr, ptr %0, align 8, !tbaa !11
-  %5 = icmp eq ptr %4, null
+  %4 = load ptr, ptr %0, align 8, !tbaa !11   ; str.data[0]
+  %5 = icmp eq ptr %4, null       ; !str.data[0]
   br i1 %5, label %8, label %6
 
 6:                                                ; preds = %3
-  tail call void @free(ptr noundef %4) #24
-  %7 = getelementptr inbounds i8, ptr %0, i64 8
-  tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) %7, i8 0, i64 16, i1 false)
+  tail call void @free(ptr noundef %4) #24    ; free(str.data)
+  %7 = getelementptr inbounds i8, ptr %0, i64 8   ; &str.len
+  tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) %7, i8 0, i64 16, i1 false)    ; str.len=0
   br label %8
 
 8:                                                ; preds = %1, %3, %6

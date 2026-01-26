@@ -575,3 +575,60 @@ On the other hand, a buffer like `buff1` guarantees that incremental memory acce
 ---
 
 All in all, this function, despite being simple in control flow, revealed a lot of strange things.
+
+### clearstr, freestr()
+
+clearstr() is clean but freestr() is a little strange.
+
+This is the IR:
+```
+define dso_local range(i32 -4, 1) i32 @freeStr(ptr noundef %0) local_unnamed_addr #15 {
+  %2 = icmp eq ptr %0, null     ; !str
+  br i1 %2, label %8, label %3
+
+3:                                                ; preds = %1
+  %4 = load ptr, ptr %0, align 8, !tbaa !11   ; str.data[0]
+  %5 = icmp eq ptr %4, null       ; !str.data[0]
+  br i1 %5, label %8, label %6
+
+6:                                                ; preds = %3
+  tail call void @free(ptr noundef %4) #24    ; free(str.data)
+  %7 = getelementptr inbounds i8, ptr %0, i64 8   ; &str.len
+  tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) %7, i8 0, i64 16, i1 false)    ; str.len=0
+  br label %8
+
+8:                                                ; preds = %1, %3, %6
+  %9 = phi i32 [ 0, %6 ], [ -4, %3 ], [ -4, %1 ]
+  ret i32 %9
+}
+```
+
+We are freeing `str->data`, we are setting `str->len` zero, but where is `str->cap=0`? Plus, why memset? That memset instruction will look something like this in C:
+```c
+memset(%7, 0, 16)
+```
+We are zeroing 16 bytes of memory starting from %7. That means, it covers both str->len and str->cap.
+
+---
+
+As I said, I am intentionally avoiding kmp* functions for now. Next is -O2.
+
+## -O2
+
+I am starting -O2 with 1139 lines. I am mentioning this because often I make changes in the source which changes the number of lines.
+
+init(), extendCap(), lenstr(), boundcheck(), getstr(), clearstr() is identical with -O1.
+
+populate() is a little different but nothing special.
+
+tolcase() and toucase() were almost identical, except one inconsistent branching in each fns first block, which was due to the repeated copy-paste as the source was changing multiple times.
+
+cmp2strs() had the same problem as tolcase(), with a few more occurrences.
+
+findChar() is almost identical with one different branch, same as above. This time, that branch (block 43) is different, only one virtual register though (%44).
+
+---
+
+Everything identical has been filtered. Now I'll explore the kmp-implementation.
+
+## Knuth Morris Pratt (KMP) Algorithm
