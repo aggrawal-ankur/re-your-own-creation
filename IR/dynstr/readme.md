@@ -697,3 +697,131 @@ Block 18 decides on the value of length for `pat`. It then checks if `pat_len > 
 ---
 
 Before it gets complicated, it'd be nice if I note important virtual registers somewhere. I'll not mess up the readme. I'll note them somewhere else and paste them later in the end.
+
+### Diving Deeper
+
+Continuing from block 31 now, the first thing in sight is a zero-extension and an llvm.stacksave() call followed by an alloca. That implies a VLA is requested here.
+
+I think that we are preparing for kmp_build_lps as it requires an array-pointer as a 3rd argument to build the lps.
+
+First we have zero-extended `plen` to i64. Now we are sign-extending `plen` to i64, which is quite-strange, because I don't remember anything that requires it. Also, it is first used in block 60 in a `ult` comparison, which makes it even more strange. Anyways
+
+Now we are checking `plen==0` in %36. Based on %36, we're deciding on our branch. If true, we go to %64. If false, we go to %37. As much as I remember, if plen is 0, there is nothing to search for in the main string, so we must head to the exit instead. It is %64 is like a trampoline before exit, like we have seen in a few fns before. Our thinking is heading in right direction. %64 -> %113 -> %115. Let's go to block 37 now.
+
+Now I am assuming that block 37 is where kmp_build_lps is inlined from.
+
+### kmp_build_lps (Block 37 <-> Block 60)
+
+Block 37:
+```
+37:                                               ; preds = %31
+  store i64 0, ptr %34, align 16, !tbaa !27
+  %38 = getelementptr i8, ptr %34, i64 -8
+  %39 = icmp eq i32 %29, 1
+  br i1 %39, label %64, label %40
+```
+
+The store-op is basically `lps[0]=0`. However, GEP is mysterious, as always.
+```
+%38 = getelementptr i8, ptr %34, i64 -8
+```
+
+Thinking in terms of: `(base + size_in_bytes * i)`, we are indexing -8 bytes starting from &lps[0], that's strange. Anyways, leave it.
+
+Next we are checking if plen==1. Based on that, we are branching to %64 if true and %40 if false.
+
+The loop starts from block 40.
+
+---
+
+This loop is really enormous. There are multiple branches. The first thing I need to establish is where it ends. My first impression says that it ends at block 60.
+
+As with every loop, we have phi-nodes in the starting. We have 2 phi-nodes, both of them are i64 and based on the initialization value, %41 looks like the iterator (i) and %42 the length (len) variable, because of i being initialized 1 and len being 0.
+```
+%41 = phi i64 [ %62, %60 ], [ 1, %37 ]
+%42 = phi i64 [ %61, %60 ], [ 0, %37 ]
+```
+
+The loop was probably the easiest part to understand. The understanding of phi-nodes was also correct.
+
+In block 60, we are comparing i with sign_extended version of plen. The comparison itself is unsigned less then. I mentioned this earlier as well. When I opened the source, it didn't took much to realize the discrepancy. I've changed `plen` to int when I made changes to `lenstr()`. But kmp_build_lps assumed it is received in size_t, which caused the whole mess.
+
+But that still doesn't explain why we need to sign-extend `plen` only to use it in an unsigned comparison. The only assumption I can think of is that plen is fundamentally a signed 32-bit value so it must be extended keeping signed-ness intact. But then the question is why we are zero-extending it as well.
+
+We are zero-extending it for the `size_t lps[plen]` part as you can't allocate with negative size. Except that, we are not using it anywhere else.
+
+This length thing has really disturbed me a lot. Now I am thinking that lenstr must never return -1. If the string is invalid or null, just return 0. But I am not making that change yet. It will simply disturb everything and I am not prepared to patch it.
+
+---
+
+Now the mystery of %38. %38 is used in block 54. We load %38 into %56 and it is consumed by a phi-node in %61. And %61 is the final of len in the loop. That's what makes it confusing.
+
+OK, the answer is pretty simple.
+
+That's the part of C it aligns with:
+```c
+len = lps[len-1];
+```
+
+Now the hilarious part. Instead of calculating len-1 and offsetting that much into lps, the compiler calculated lps[-1], which is `&lps[0] - 8`. Now when this line executes, instead of calculating `len-1` and indexing into `lps`, we directly use this memory location and offset until len.
+
+It is better mathematically.
+```
+org = &lps[0] = 1000
+chg = &lps[0] - 8 = 992
+
+len=5
+
+org[5-1] = *(1000 + 8*4) = *(1000 + 32) = *(1032)
+chg[5]   = *(992  + 8*5) = *(992  + 40) = *(1032)
+```
+
+That's it. That's systems for you.
+
+### kmp_search continues
+
+Look at block 74, how beautifully it starts:
+```
+74:                                               ; preds = %70, %100
+  %75 = phi i64 [ 0, %70 ], [ %103, %100 ]    ; 
+  %76 = phi i64 [ 0, %70 ], [ %102, %100 ]    ; 
+  %77 = phi i64 [ 0, %70 ], [ %101, %100 ]    ; 
+  ..
+  ..
+```
+No assumptions about what these values can be. Let's start exploring it instead. I have one. In %78, we are doing `str[%77]`, that reminds me of two counter variables used to move forward and backwards in `str` and `pat` buffers. And third must be the loop iterator? Solved.
+
+I've looked at the source and found `i` to be the main str iterator, `k` to be the substring iterator and the third one is for count, the number of matches found. 2 correct, one wrong.
+
+Done!
+
+---
+
+I feared KMP the most, which is why I kept it for last. It is literally the fastest piece of IR I have read.
+
+### Important Virtual Registers
+
+%0 -> str -> "Main String"    -> Haystack
+%1 -> pat -> "Pattern String" -> Needle
+%2 -> kmp_obj -> "The Result Object"
+
+%18 -> i32 str_len (slen)
+%29 -> i32 pat_len (plen)
+
+%32 -> i64 pat_len (plen)
+%35 -> s_i64 pat_len (signed 64-bit plen)
+
+%34 -> size_t lps[plen]
+%38 -> &lps[0]-8
+
+%41 -> i (loop iter in kmp_build_lps)
+%42 -> len (in kmp_build_lps fn)
+
+---
+
+%71 -> &kmp_obj->indices
+%72 -> &lps[plen]
+%73 -> &lps[plen]-8 (&lps[plen-1])
+%75 -> count
+%76 -> k (substring iterator)
+%77 -> i (main string iterator)

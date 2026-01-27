@@ -862,132 +862,136 @@ define dso_local noundef i32 @kmp_search(ptr noundef readonly %0, ptr noundef re
   br i1 %30, label %115, label %31
 
 31:                                               ; preds = %28
-  %32 = zext i32 %29 to i64
+  %32 = zext i32 %29 to i64   ; pat_len or plen is zero extended to i64 so that `size_t lps[plen]` is possible
   %33 = tail call ptr @llvm.stacksave.p0()
-  %34 = alloca i64, i64 %32, align 16
-  %35 = sext i32 %29 to i64
-  %36 = icmp eq i32 %29, 0
+  %34 = alloca i64, i64 %32, align 16       ; size_t lps[plen]
+  %35 = sext i32 %29 to i64   ; sign-extend plen to i64
+  %36 = icmp eq i32 %29, 0    ; plen==0
   br i1 %36, label %64, label %37
 
-37:                                               ; preds = %31
-  store i64 0, ptr %34, align 16, !tbaa !27
-  %38 = getelementptr i8, ptr %34, i64 -8
-  %39 = icmp eq i32 %29, 1
+37:           ; kmp_build_lps inlined             ; preds = %31
+  store i64 0, ptr %34, align 16, !tbaa !27    ; lps[0]=0
+  %38 = getelementptr i8, ptr %34, i64 -8      ; &lps[0] - 8
+  %39 = icmp eq i32 %29, 1        ; plen==1
   br i1 %39, label %64, label %40
 
-40:                                               ; preds = %37, %60
-  %41 = phi i64 [ %62, %60 ], [ 1, %37 ]
-  %42 = phi i64 [ %61, %60 ], [ 0, %37 ]
-  %43 = getelementptr inbounds i8, ptr %1, i64 %41
-  %44 = load i8, ptr %43, align 1, !tbaa !13
-  %45 = getelementptr inbounds i8, ptr %1, i64 %42
-  %46 = load i8, ptr %45, align 1, !tbaa !13
-  %47 = icmp eq i8 %44, %46
+40:         ; if (pat[i] == pat[len])             ; preds = %37, %60
+  %41 = phi i64 [ %62, %60 ], [ 1, %37 ]    ; i=1 (init val)
+  %42 = phi i64 [ %61, %60 ], [ 0, %37 ]    ; len=0 (init val)
+  %43 = getelementptr inbounds i8, ptr %1, i64 %41    ; &pat[i]
+  %44 = load i8, ptr %43, align 1, !tbaa !13    ; pat[i]
+  %45 = getelementptr inbounds i8, ptr %1, i64 %42    ; &pat[len]
+  %46 = load i8, ptr %45, align 1, !tbaa !13    ; pat[len]
+  %47 = icmp eq i8 %44, %46       ; pat[i] == pat[len]
   br i1 %47, label %48, label %52
 
-48:                                               ; preds = %40
-  %49 = add i64 %42, 1
-  %50 = getelementptr inbounds i64, ptr %34, i64 %41
-  store i64 %49, ptr %50, align 8, !tbaa !27
-  %51 = add nuw i64 %41, 1
+48:         ; body (on true)                      ; preds = %40
+  %49 = add i64 %42, 1    ; len++
+  %50 = getelementptr inbounds i64, ptr %34, i64 %41    ; &lps[i]
+  store i64 %49, ptr %50, align 8, !tbaa !27    ; lps[i] = latest_val_of_len
+  %51 = add nuw i64 %41, 1    ; i++
   br label %60
 
-52:                                               ; preds = %40
-  %53 = icmp eq i64 %42, 0
+52:         ; else if (len != 0)                  ; preds = %40
+  %53 = icmp eq i64 %42, 0        ; len == 0
   br i1 %53, label %57, label %54
 
-54:                                               ; preds = %52
-  %55 = getelementptr i64, ptr %38, i64 %42
-  %56 = load i64, ptr %55, align 8, !tbaa !27
+54:         ; body (on false)                     ; preds = %52
+  %55 = getelementptr i64, ptr %38, i64 %42     ; &lps[0]-8
+  %56 = load i64, ptr %55, align 8, !tbaa !27   ; *(&lps[0]-8 + 8*len)  (same as lps[len-1])
   br label %60
 
-57:                                               ; preds = %52
-  %58 = getelementptr inbounds i64, ptr %34, i64 %41
-  store i64 0, ptr %58, align 8, !tbaa !27
-  %59 = add nuw i64 %41, 1
+57:         ; else (else if is true)              ; preds = %52
+  %58 = getelementptr inbounds i64, ptr %34, i64 %41    ; &lps[i]
+  store i64 0, ptr %58, align 8, !tbaa !27    ; lps[i] = 0
+  %59 = add nuw i64 %41, 1    ; i++
   br label %60
 
 60:                                               ; preds = %57, %54, %48
-  %61 = phi i64 [ %49, %48 ], [ %56, %54 ], [ 0, %57 ]
-  %62 = phi i64 [ %51, %48 ], [ %41, %54 ], [ %59, %57 ]
-  %63 = icmp ult i64 %62, %35
+  %61 = phi i64 [ %49, %48 ], [ %56, %54 ], [ 0, %57 ]      ; len
+  %62 = phi i64 [ %51, %48 ], [ %41, %54 ], [ %59, %57 ]    ; i
+  %63 = icmp ult i64 %62, %35       ; i < sign_extended(plen)
   br i1 %63, label %40, label %64, !llvm.loop !28
 
 64:                                               ; preds = %60, %31, %37
-  %65 = phi i32 [ -6, %31 ], [ 0, %37 ], [ 0, %60 ]
+  %65 = phi i32 [ -6, %31 ], [ 0, %37 ], [ 0, %60 ]    ; (-6 when plen==0)
   br i1 %36, label %113, label %66
 
+; kmp_build_lps completed
+  ; branch to %113 if INVALID_BUFF (-6) was returned
+  ; branch to %66, where kmp_search continued, if kmp_build_lps was a success
+
 66:                                               ; preds = %64
-  %67 = sext i32 %18 to i64
-  %68 = getelementptr i8, ptr %34, i64 -8
-  %69 = icmp eq i32 %18, 0
+  %67 = sext i32 %18 to i64     ; (slen sign-extended to i64)
+  %68 = getelementptr i8, ptr %34, i64 -8      ; &lps[0]-8    (why not reuse %38?)
+  %69 = icmp eq i32 %18, 0          ; slen==0
   br i1 %69, label %105, label %70
 
 70:                                               ; preds = %66
-  %71 = getelementptr inbounds i8, ptr %2, i64 8
-  %72 = getelementptr i64, ptr %34, i64 %35
-  %73 = getelementptr i8, ptr %72, i64 -8
+  %71 = getelementptr inbounds i8, ptr %2, i64 8    ; &kmp_obj->indices
+  %72 = getelementptr i64, ptr %34, i64 %35    ; &lps[plen]
+  %73 = getelementptr i8, ptr %72, i64 -8      ; &lps[plen]-8    (&lps[plen-1] ?)
   br label %74
 
 74:                                               ; preds = %70, %100
-  %75 = phi i64 [ 0, %70 ], [ %103, %100 ]
-  %76 = phi i64 [ 0, %70 ], [ %102, %100 ]
-  %77 = phi i64 [ 0, %70 ], [ %101, %100 ]
-  %78 = getelementptr inbounds i8, ptr %0, i64 %77
-  %79 = load i8, ptr %78, align 1, !tbaa !13
-  %80 = getelementptr inbounds i8, ptr %1, i64 %76
-  %81 = load i8, ptr %80, align 1, !tbaa !13
-  %82 = icmp eq i8 %79, %81
+  %75 = phi i64 [ 0, %70 ], [ %103, %100 ]    ; count
+  %76 = phi i64 [ 0, %70 ], [ %102, %100 ]    ; k
+  %77 = phi i64 [ 0, %70 ], [ %101, %100 ]    ; i (main str iter)
+  %78 = getelementptr inbounds i8, ptr %0, i64 %77    ; &str[i]
+  %79 = load i8, ptr %78, align 1, !tbaa !13    ; str[i]
+  %80 = getelementptr inbounds i8, ptr %1, i64 %76    ; &pat[k]
+  %81 = load i8, ptr %80, align 1, !tbaa !13    ; pat[k]
+  %82 = icmp eq i8 %79, %81       ; str[i] == pat[k]
   br i1 %82, label %83, label %93
 
-83:                                               ; preds = %74
-  %84 = add nuw i64 %77, 1
-  %85 = add i64 %76, 1
-  %86 = icmp eq i64 %85, %35
+83:         ; characters matched                  ; preds = %74
+  %84 = add nuw i64 %77, 1    ; i++
+  %85 = add i64 %76, 1        ; k++
+  %86 = icmp eq i64 %85, %35  ; i == plen    (if number of characters matched so far eq to the number of characters in the pattern, we are done for now until the next difference comes or the str ends)
   br i1 %86, label %87, label %100
 
-87:                                               ; preds = %83
-  %88 = sub i64 %77, %76
-  %89 = load ptr, ptr %71, align 8, !tbaa !29
-  %90 = getelementptr inbounds i64, ptr %89, i64 %75
-  store i64 %88, ptr %90, align 8, !tbaa !27
-  %91 = add i64 %75, 1
-  %92 = load i64, ptr %73, align 8, !tbaa !27
+87:       ; all chars have matched so far         ; preds = %83
+  %88 = sub i64 %77, %76    ; i-k
+  %89 = load ptr, ptr %71, align 8, !tbaa !29   ; kmp_obj->indices
+  %90 = getelementptr inbounds i64, ptr %89, i64 %75    ; kmp_obj->indices[count]
+  store i64 %88, ptr %90, align 8, !tbaa !27      ; kmp_obj->indices[count] = i-k    (store the idx of the match found)
+  %91 = add i64 %75, 1    ; count++
+  %92 = load i64, ptr %73, align 8, !tbaa !27     ; lps[plen-1]
   br label %100
 
-93:                                               ; preds = %74
-  %94 = icmp eq i64 %76, 0
+93:             ; str[i] != pat[k]                ; preds = %74
+  %94 = icmp eq i64 %76, 0        ; k==0
   br i1 %94, label %98, label %95
 
 95:                                               ; preds = %93
-  %96 = getelementptr i64, ptr %68, i64 %76
-  %97 = load i64, ptr %96, align 8, !tbaa !27
+  %96 = getelementptr i64, ptr %68, i64 %76     ; (&lps[0]-8) + k
+  %97 = load i64, ptr %96, align 8, !tbaa !27   ; *((&lps[0]-8) + k)    lps[k-1]
   br label %100
 
 98:                                               ; preds = %93
-  %99 = add nuw i64 %77, 1
+  %99 = add nuw i64 %77, 1    ; i++
   br label %100
 
 100:                                              ; preds = %95, %98, %83, %87
-  %101 = phi i64 [ %84, %87 ], [ %84, %83 ], [ %77, %95 ], [ %99, %98 ]
-  %102 = phi i64 [ %92, %87 ], [ %85, %83 ], [ %97, %95 ], [ 0, %98 ]
-  %103 = phi i64 [ %91, %87 ], [ %75, %83 ], [ %75, %95 ], [ %75, %98 ]
+  %101 = phi i64 [ %84, %87 ], [ %84, %83 ], [ %77, %95 ], [ %99, %98 ]    ; i
+  %102 = phi i64 [ %92, %87 ], [ %85, %83 ], [ %97, %95 ], [ 0, %98 ]      ; k
+  %103 = phi i64 [ %91, %87 ], [ %75, %83 ], [ %75, %95 ], [ %75, %98 ]    ; count
   %104 = icmp ult i64 %101, %67
   br i1 %104, label %74, label %105, !llvm.loop !31
 
 105:                                              ; preds = %100, %66
-  %106 = phi i64 [ 0, %66 ], [ %103, %100 ]
-  %107 = icmp eq i64 %106, 0
+  %106 = phi i64 [ 0, %66 ], [ %103, %100 ]    ; count
+  %107 = icmp eq i64 %106, 0          ; count==0
   br i1 %107, label %108, label %110
 
 108:                                              ; preds = %105
-  %109 = getelementptr inbounds i8, ptr %2, i64 8
-  store ptr null, ptr %109, align 8, !tbaa !29
+  %109 = getelementptr inbounds i8, ptr %2, i64 8    ; &kmp_obj->indices
+  store ptr null, ptr %109, align 8, !tbaa !29       ; kmp_obj->indices = NULL (if count is 0)
   br label %110
 
 110:                                              ; preds = %105, %108
-  %111 = phi i64 [ 0, %108 ], [ %106, %105 ]
-  %112 = phi i32 [ -16, %108 ], [ 0, %105 ]
+  %111 = phi i64 [ 0, %108 ], [ %106, %105 ]    ; count
+  %112 = phi i32 [ -16, %108 ], [ 0, %105 ]     ; SUBSTR_NOT_FOUND
   store i64 %111, ptr %2, align 8, !tbaa !32
   br label %113
 
