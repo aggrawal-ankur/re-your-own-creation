@@ -68,7 +68,7 @@ init:
   jmp .ret_block
 
 .ret_block:
-  # Note: pop registers in order, ALWAYS.
+  # Note: ALWAYS pop registers in opposite order of push
   pop r12
   pop rbx
   leave

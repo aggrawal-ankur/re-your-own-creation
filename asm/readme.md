@@ -49,3 +49,23 @@ They include: rbx, rbp, rsp, r12, r13, r14, r15
 The caller function must preserve the original value in these registers as a call to another function can use these registers. The callee is not liable.
 
 They include: rax, rcx, r10, r11
+
+# Day 1 Takeaways
+
+Today (January 28, 2026) is the first day and I've implemented `init()` in x64 assembly.
+
+As I learned x64 assembly back in May 2025, that's when I wrote it. It has been 8 months have passed since then, so it has become a little rusty. But I am glad I am able to sharp myself this fast.
+
+A lot is different, honestly. Thinking in assembly is quite a lot different than C. That's a thing I realized in May 2025 only, but honestly, practising it is a different thing, which I am doing now.
+
+Every language is designed with different things in mind, which is why there are different advantages and tradeoffs. For example, arithmetic overflow wraps in C, but you can capture it in assembly.
+
+Assembly forces you to think differently. Every decision you make is explicit because you can't chain thoughts like C. You've to branch to enforce non-linear flow, which can get complicated due to the amount of conditional jumps available in x64-asm.
+
+One thing I realized this time is that writing assembly involves thinking on two lines. First you think about what is linear, stuff which executes one-by-one plainly without any decision-making. But linearity is not enough. The flow deviates or branches on conditions, and branches can get really messy here. So you have to think in terms of when is branching not required (which becomes our linear code) and the exact opposite of it, where branches become real.
+
+As usual, I am leaving lots of comments, I am annotating blocks of assembly with how they align with the C source and assembly-centric notes. For example - "always pop registers in opposite order of push". I am leaving these notes so that I can get used to the assembly's way of thinking.
+
+Register hygiene is something I'll learn slowly. Variables are pretty much non-existing in assembly. You have registers or memory locations on stack. That really forces you to think different than C because the notion of scratch space is different here. Then comes clobbering of register, which you have to ensure to avoid using garbage values. You've to use registers wisely as they can represent lifetime. Compilers use them carefully, which is why they represent state. If I used them recklessly, it'll get tough and complicated later while exploring the disassembly.
+
+Understanding of RFLAGS is a must. How CF, ZF, SF etc work and what manipulates them is important.
