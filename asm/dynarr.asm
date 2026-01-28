@@ -43,10 +43,10 @@ init:
   test rax, rax    # NULL check on the pointer returned by malloc
   jz   .malloc_failed
 
-  mov QWORD PTR [rbx + 8*0], rax     ; arr->ptr = rax (malloc's return value)
-  mov QWORD PTR [rbx + 8*1], rsi     ; arr->elem_size (rsi)
-  mov QWORD PTR [rbx + 8*2], 0       ; arr->count     (initialize with 0)
-  mov QWORD PTR [rbx + 8*3], rcx     ; arr->capacity  (rcx)
+  mov QWORD PTR [rbx + 8*0], rax     # arr->ptr = rax (malloc's return value)
+  mov QWORD PTR [rbx + 8*1], rsi     # arr->elem_size (rsi)
+  mov QWORD PTR [rbx + 8*2], 0       # arr->count     (initialize with 0)
+  mov QWORD PTR [rbx + 8*3], rcx     # arr->capacity  (rcx)
 
   xor rax, rax      # rax=SUCCESS (0)
   jmp .ret_block
