@@ -42,10 +42,10 @@ More than 6? Put remaining on stack.
 
 The callee function must reserve the original value in these registers before using them and restore their state before exit.
 
-They include: `rbx, r12, r13, r14, r1`
+They include: rbx, rbp, rsp, r12, r13, r14, r15
 
 ### Caller Saved Registers
 
 The caller function must preserve the original value in these registers as a call to another function can use these registers. The callee is not liable.
 
-They include: `rax, r10, r11`
+They include: rax, rcx, r10, r11
