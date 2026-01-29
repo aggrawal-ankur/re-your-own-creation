@@ -42,13 +42,31 @@ More than 6? Put remaining on stack.
 
 The callee function must reserve the original value in these registers before using them and restore their state before exit.
 
-They include: rbx, rbp, rsp, r12, r13, r14, r15
+They include: rbx rbp r12 r13 r14 r15
 
 ### Caller Saved Registers
 
-The caller function must preserve the original value in these registers as a call to another function can use these registers. The callee is not liable.
+The caller function must preserve the original value in these registers as a call to another function can use these registers.
 
-They include: rax, rcx, r10, r11
+As the callee is not liable to manage their state, they are excellent scratchpads.
+
+They include: rax rcx rdx rsi rdi r8 r9 r10 r11
+
+# Register Hygiene
+
+Use caller-saved registers for:
+  - temporaries
+  - intermediate math
+  - values that die before calls
+
+Use callee-saved registers for:
+  - long-lived values across calls
+  - struct base pointers
+  - loop invariants that survive calls
+
+**rsp is not a scratch register**
+
+**rbp is scratch only when I give up the base pointer.**
 
 # Day 1 Takeaways
 
@@ -69,3 +87,45 @@ As usual, I am leaving lots of comments, I am annotating blocks of assembly with
 Register hygiene is something I'll learn slowly. Variables are pretty much non-existing in assembly. You have registers or memory locations on stack. That really forces you to think different than C because the notion of scratch space is different here. Then comes clobbering of register, which you have to ensure to avoid using garbage values. You've to use registers wisely as they can represent lifetime. Compilers use them carefully, which is why they represent state. If I used them recklessly, it'll get tough and complicated later while exploring the disassembly.
 
 Understanding of RFLAGS is a must. How CF, ZF, SF etc work and what manipulates them is important.
+
+# Day 2 Takeaways
+
+Date: January 29, 2025
+
+Even though I am moving slowly without hurries, the progress sometimes feel less. That's because I am managing physical pain for so many days at this point. This chronic pain doesn't even go after stretching. And when I don't get proper rest, that's enough for me. But no matter what, I always learn starting from evening. 3-4 hours is the maximum I am reaching these days, throughout the day. I learn ~1h in morning.
+
+It is complicated, but leave it.
+
+Today I implemented extend(). I was done with the implementation in morning only, ~1h. Then I didn't do anything until evening, because I went to bed late and I didn't got adequate sleep, so I woke up with pain. And my afternoon sleep was non-existing too.
+
+In the evening, I started thinking about the assembly I've written and refactored it.
+
+I am improving my register hygiene and I've also created a heading for it. This has helped me remove the unnecessary register pushing to align the stack or reducing rsp for the same cause, which is great, because it removes unnecessary lines.
+
+I am also starting to think in terms of register live ranges.
+
+For the first time, I implemented one thing I've learned from LLVM IR, and I also understood it to the point I was able to relate the behavior with something else. Remember the IR performing addition before comparison checks? Like in lenstr where `str[0] == '\0'` was already checked before so it adds 1 and then checks the condition on the moved pointer. **That's exactly what a do-while does.** It is amusing to me as well. Earlier I've written the `while (cap < total) cap *= 2` loop in the same way, but then I changed it.
+
+I've used `imul` this time because it discards overflows beyond 64-bit, something `mul` doesn't do. Also, mul operates on the accumulator by default, so there is no way to pass to registers of our convenience. `mul` and `imul` are practically the same here because we only need the lower 64-bits in the output, and if an overflow was there, it is already in UB.
+
+I am also understanding that I should try as much as possible to use caller-saved registers for scratchpads as they don't need to be pushed on the stack. It is clean and better.
+
+***Structure is emergent, not preserved. Therefore, I must think in terms of register live ranges, they tell which registers are active in a region of assembly. That's the shift in thinking I need.***
+
+The loop thing: `while (cap < total) cap *= 2` also taught me one important lesson. ***A lot of times, the compiler is not spitting assembly out of witchery. The compiler thinks a lot, it reasons from multiple angles.***
+
+***To understand assembly better, I need to improve my reasoning. I need to think more. I need to observe more. This loop thing, I've seen this 10s of times if not 100s while reading the LLVM IR, but I never reasoned what else this pattern could match, which I did today and found that it matches the semantics of a do-while loop. I can't write and reason simultaneously. I must give proper time, energy and attention to this.***
+
+***The compiler's line of reasoning is not magical or unorthodox, it's mathematical and logical. The compiler notices more than me. That's why asking questions about the generated assembly is simply non-negotiable because everything there is properly reasoned. If I don't understand a part, there is always a reasoning behind why the compiler chose it, which can only be found by asking questions and looking with what we can call "unconventional angles".***
+
+***The line of reasoning "required" vs the line of reasoning "I currently function with" is the gap I need to fill.***
+
+About register hygiene, I've learned that *registers don't keep meaning attached to them*. It's transient. The meaning depends on the region it is active in and the way it is being used (the value in computation).
+
+***When memory and registers both are involved, memory is the more authoritative source than a register to reason about a value.*** When I understood this line, I removed copying rbx into rcx which is what `size_t cap = arr->capacity` is about. I let rbx (arr->capacity) undergo `cap *= 2` because the original value of arr->capacity is still accessible at `rdi + 8*3`. But I did preserved rdi before realloc.
+
+A thing about register live ranges is that *a variable in C is alive in its block, if it is a fn, it is alive in the whole fn. But a register is only alive in the region it is used.*
+
+---
+
+I wanted to see if I can improve init() based on these new findings, but I am already late and I don't want to sleep late today. So I'll do that tomorrow.

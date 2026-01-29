@@ -73,3 +73,72 @@ init:
   pop rbx
   leave
   ret
+
+
+# Function Parameters
+#   rdi=&arr (pointer to the dynamic array struct)
+#   rsi=add_bytes (extra bytes required, size_t)
+extend:
+  push rbp          # preserve old base pointer
+  mov  rbp, rsp     # setup new base-ptr for current procedure
+
+# if (!arr || arr->capacity == 0)
+#   rdi is live in this region, along with rcx which holds a member value pointed to by rdi (arr->capacity)
+  test rdi, rdi
+  jz   .init_first
+
+  mov  rcx, QWORD PTR [rdi + 8*3]    # arr->capacity
+  test rcx, rcx
+  jz   .init_first
+
+# if (arr->count+add_bytes <= arr->capacity)
+#   members of rdi (rcx and other dereferenced) along with rsi are active in this region
+  mov  r10, QWORD PTR [rdi + 8*2]
+  add  r10, rsi    # arr->count+add_bytes (i.e `total`, later)
+  cmp  r10, rcx
+  jle .success
+
+# Now we need space for two variables: (total, cap)
+#   `total` is already computed in r10, and rcx represents arr->capacity already
+#   No need for for other registers because this region of code doesn't require anything new
+#   rcx undergoes changes (cap *= 2) and it's not a form of bad code because the original value is still intact in arr->capacity (via rdi + 8*3)
+
+# while (cap < total) cap *= 2
+.inc_cap:
+#  We are doing updation first because the condition is checked for the first time outside the loop already
+#  This is basically while loop changed to a do-while:
+#    `do { cap *= 2 } while ( cap < total);`
+  shl rcx, 1    # cap *= 2
+  cmp rcx, r10
+  jl .inc_cap
+
+# To call realloc, we've to override rdi and rsi, which have the params passed to the `extend` procedure
+#   rdi has the pointer to the dynamic array struct, so touching that makes no sense
+#   rsi has add_bytes which is not active in this or any region forward. We can override rsi without any worries
+.realloc:
+  mov  r11, rdi            # r11 = ptr to dynamic array struct (preserve rdi in r11)
+  mov  rsi, [rdi + 8*1]    # rsi = arr->elem_size
+  imul rsi, rcx            # rsi = arr->elem_size*cap
+  mov  rdi, [rdi + 8*0]    # rdi = &arr->ptr
+  call realloc@PLT
+  test rax, rax
+  jz   .realloc_failed
+
+  mov QWORD PTR [r11 + 8*0], rax    # arr->ptr = tmp
+  mov QWORD PTR [r11 + 8*3], rcx    # arr->capacity = cap
+  jmp .success
+
+.init_first:
+  mov rax, -5
+  jmp .ret_block
+
+.realloc_failed:
+  mov rax, -6
+  jmp .ret_block
+
+.success:
+  xor rax, rax
+
+.ret_block:
+  leave
+  ret
