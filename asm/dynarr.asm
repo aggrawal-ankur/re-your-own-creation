@@ -12,17 +12,15 @@
 init:
   push rbp         # old base-ptr reservation
   mov  rbp, rsp    # new base-ptr for current procedure
-  push rbx         # callee-saved
-  push r12         # A dummy push to realign the stack to a 16-byte boundary because we are calling malloc
-  # No stack space required
+  # No stack space required; No callee-saved register required
 
 # if (arr->capacity != 0)
-  mov  rbx, QWORD PTR [rdi + 8*3]          # arr->capacity
-  test rbx, rbx     # `arr->capacity` == 0
+  mov  rcx, QWORD PTR [rdi + 8*3]     # arr->capacity
+  test rcx, rcx                       # `arr->capacity` == 0
   jnz  .already_init
 
 # if (elem_size == 0 || cap == 0)
-  test rsi, rsi     # `elem_size` == 0
+  test rsi, rsi        # `elem_size` == 0
   jz   .invalid_sizes
 
 # if (cap == 0)
@@ -37,16 +35,16 @@ init:
   test rdx, rdx    # Check if result overflowed to rdx
   jnz  .sizemax_overflow     # Jump if rdx is non-zero
 
-  mov  rbx, rdi    # preserve the pointer to DynArr
+  mov  rcx, rdi    # preserve the pointer to DynArr
   mov  rdi, rax    # Reuse rax as it contains (cap * elem_size) from previous computation
   call malloc@PLT
   test rax, rax    # NULL check on the pointer returned by malloc
   jz   .malloc_failed
 
-  mov QWORD PTR [rbx + 8*0], rax     # arr->ptr = rax (malloc's return value)
-  mov QWORD PTR [rbx + 8*1], rsi     # arr->elem_size (rsi)
-  mov QWORD PTR [rbx + 8*2], 0       # arr->count     (initialize with 0)
-  mov QWORD PTR [rbx + 8*3], rcx     # arr->capacity  (rcx)
+  mov QWORD PTR [rcx + 8*0], rax     # arr->ptr = rax (malloc's return value)
+  mov QWORD PTR [rcx + 8*1], rsi     # arr->elem_size (rsi)
+  mov QWORD PTR [rcx + 8*2], 0       # arr->count     (initialize with 0)
+  mov QWORD PTR [rcx + 8*3], rcx     # arr->capacity  (rcx)
 
   xor rax, rax      # rax=SUCCESS (0)
   jmp .ret_block
@@ -68,12 +66,12 @@ init:
   jmp .ret_block
 
 .ret_block:
-  # Note: ALWAYS pop registers in opposite order of push
-  pop r12
-  pop rbx
   leave
   ret
 
+.section .text
+.global extend
+.type extend, @function
 
 # Function Parameters
 #   rdi=&arr (pointer to the dynamic array struct)
