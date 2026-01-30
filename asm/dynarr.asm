@@ -50,19 +50,19 @@ init:
   jmp .ret_block
 
 .already_init:
-  mov rax, -1
+  mov eax, -1
   jmp .ret_block
 
 .invalid_sizes:
-  mov rax, -2
+  mov eax, -2
   jmp .ret_block
 
 .sizemax_overflow:
-  mov rax, -3
+  mov eax, -3
   jmp .ret_block
 
 .malloc_failed:
-  mov rax, -4
+  mov eax, -4
   jmp .ret_block
 
 .ret_block:
@@ -127,15 +127,15 @@ extend:
   jmp .success
 
 .init_first:
-  mov rax, -5
+  mov eax, -5
   jmp .ret_block
 
 .realloc_failed:
-  mov rax, -6
+  mov eax, -6
   jmp .ret_block
 
 .success:
-  xor rax, rax
+  xor eax, eax
 
 .ret_block:
   leave
@@ -188,7 +188,7 @@ pushOne:
   mov  rsi, 1
   call extend     # extend(arr, 1)
 
-  test rax, rax
+  test eax, eax
   jnz  .ret_block     # No need to set rax as it is already set with appropriate return value
 
 # `void *dest = (char*)arr->ptr + (arr->count * arr->elem_size);`
@@ -217,11 +217,11 @@ pushOne:
   add rcx, 1
   mov QWORD PTR [r14 + 8*2], rcx
 
-  xor rax, rax      # SUCCESS
+  xor eax, eax      # SUCCESS
   jmp .ret_block
 
 .init_first:
-  mov rax, -5
+  mov eax, -5
 
 .ret_block:
   pop r15
