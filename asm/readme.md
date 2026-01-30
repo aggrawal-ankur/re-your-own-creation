@@ -90,7 +90,7 @@ Understanding of RFLAGS is a must. How CF, ZF, SF etc work and what manipulates 
 
 # Day 2 Takeaways
 
-Date: January 29, 2025
+Date: January 29, 2026
 
 Even though I am moving slowly without hurries, the progress sometimes feel less. That's because I am managing physical pain for so many days at this point. This chronic pain doesn't even go after stretching. And when I don't get proper rest, that's enough for me. But no matter what, I always learn starting from evening. 3-4 hours is the maximum I am reaching these days, throughout the day. I learn ~1h in morning.
 
@@ -129,3 +129,35 @@ A thing about register live ranges is that *a variable in C is alive in its bloc
 ---
 
 I wanted to see if I can improve init() based on these new findings, but I am already late and I don't want to sleep late today. So I'll do that tomorrow.
+
+# Day 3 Takeaways
+
+**January 30, 2026**
+
+**10:25 PM**
+
+Today was fantastic and a very memorable day in my life. I loved living today, a lot.
+
+I woke up very relaxed, with fading pain in my body. I stretched as usual and I felt great.
+
+I started with improving init(). Then I wrote pushOne. Then I changed rax to eax because DynArrStatus is an enum and enums are of type int, which involves signed values. Then I wrote pushMany. My lord, write pushMany was a smooth journey. I've simply forgotten what are hiccups. It went so smooth. In the evening, after 9.30 PM, I completed boundcheck and getelementptr as well. And I still don't want to quit, but I need to stop now and wind up the day, so that I can sleep on time and wake up relaxed tomorrow as well.
+
+Today, I reasoned better, I thought a little more, and I made these things a little more autonomous then forced.
+
+I've focused on thinking in terms of "register live ranges", which definitely helped me fight less and write better assembly. Also, it is one of the keys to understand and improve my register hygiene.
+
+I am definitely improving my register hygiene and how to prioritize callee vs caller saved registers as scratchpads. It's not complicated, but not simple either. It takes time and attention, and I am in no hurry.
+
+One important thing thing I learned today is also related to callee vs caller saved registers. I've always saved callee-saved registers, but this time, pushOne called extend, so pushOne effectively became the caller and extend became the callee. I thought that since rdi already contains the ptr to the dynarr struct, I need not to change or preserve it. But I was wrong. Now pushOne is the caller, and if the caller wants to reuse the caller-saved registers, it must preserve them, either in callee-saved registers or spill to stack. That thing was an important lesson in register hygiene. Now I feel less confused about which registers to use.
+
+A lot of times, I forget xoring rax in the end for success, in excitement. Also, once I preserve the original arguments, I sometimes forget to use the updated registers, which I am learning to prevent.
+
+Sometimes, type information can leak through register widths. Like the functions with DynArrStatus as the return type are basically ints, and the assembly encodes this with `eax` instead of `rax`. That's a signal. If the return is rax, we can assume 64-bit value. If movsxd is used on a register, that's a signal that the value belongs to a signed container.
+
+Based on the previous paragraph, I had a question. ***If a procedure returned in eax and the caller tested rax, what will happen? Any write to a 32-bit register is zero-extended into the full 64-bit one.***
+  - If -1 is returned in eax, it is 0xffffffff. Apply sign-extension, it becomes 0xffffffffffffffff. But it is still interpreted as -1 due to movsxd.
+  - In case of zero-extension, the remaining 32-bits will be zeroed and it will look like this: 0x00000000ffffffff, i.e 4.29b+
+
+***That's why, if the callee returns in rax, the caller must test eax only.***
+
+Last, `NULL` or `(void*)0` is `0` in x64-asm.
