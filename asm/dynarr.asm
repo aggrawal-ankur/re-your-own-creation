@@ -228,3 +228,85 @@ pushOne:
   pop r14
   leave
   ret
+
+
+.section .text
+.global pushMany
+.type pushMany, @function
+
+# Function Parameters:
+#   rdi=&arr (ptr to the dynarr struct)
+#   rsi=&elements (ptr to the memory where the elements to be pushed reside, type:void)
+#   rdx=count (number of elements, size_t)
+pushMany:
+  push rbp
+  mov  rbp, rsp
+  push rbx
+  push r13
+  push r14
+  push r15
+
+  test rdi, rdi      # !arr
+  jz  .init_first
+
+  mov  rbx, QWORD PTR [rdi + 8*1]    # arr->elem_size (it is live across the whol procedure, so let's keep it reserved in rbx)
+  test rbx, rbx                      # !arr->elem_size
+  jz   .init_first
+
+  test rdx, rdx                      # !count (arg3)
+  jz   .invalid_count
+
+# Before we call extend, we must preserve rdi, rsi and rdx, as they're caller-saved registers and pushMany is about to become a caller
+  mov r13, rdi    # &arr
+  mov r14, rsi    # &elements
+  mov r15, rdx    # count
+
+  # The first arg (rdi) is already set.
+  mov  rsi, rdx      # count
+  call extend
+  test eax, eax      # res != SUCCESS
+  jnz  .ret_block    # No need to set eax, the call itself sets it
+
+# Now we need to prepare for memcpy
+#   It takes 3 args so we need rdi, rsi and rdx
+#   rdx=arr->elem_size (fixed, as it can be reused in this region)
+#   rsi=&elements (fixed)
+
+  # Set arg2 (rsi=&elements)
+  mov rsi, r14
+
+  # Compute and Set arg1 (dest)
+  mov  rdi, QWORD PTR [r13 + 8*0]    # arr->ptr
+  mov  rcx, QWORD PTR [r13 + 8*2]    # arr->count
+  imul rcx, rbx                      # arr->count * arr->elem_size
+  add  rdi, rcx                      # rdi=dest
+
+  # Set arg3 (rbx=arr->elem_size)
+  mov  rdx, rbx
+  imul rdx, r15                      # rdx=count*arr->elem_size
+
+  call memcpy@PLT
+
+  mov rcx, [r13 + 8*2]               # rcx=arr->count (reload, as rcx is a caller-saved register which can be (will be) clobbered after a call within the procedure)
+  add rcx, r15                       # rcx += count
+  mov QWORD PTR [r13 + 8*2], rcx     # update
+
+  xor eax, eax    # SUCCESS
+  jmp .ret_block
+
+.init_first:
+  mov eax, -5
+  jmp .ret_block
+
+.invalid_count:
+  mov eax, -7
+  jmp .ret_block
+
+.ret_block:
+# Release memory in opposite order of reservation
+  pop r15
+  pop r14
+  pop r13
+  pop rbx
+  leave
+  ret
