@@ -310,3 +310,91 @@ pushMany:
   pop rbx
   leave
   ret
+
+
+.section .text
+.global boundcheck
+.type boundcheck, @function
+
+# Function Parameters:
+#   rdi=lb   (lower bound)
+#   rsi=ub   (upper bound)
+#   rdx=idx  (idx)
+boundcheck:
+  push rbp
+  mov  rbp, rsp
+
+  cmp rdx, lb
+  jb .zero       # idx < lb   (jb is for unsigned and jl is for signed)
+
+  cmp rdx, rsi
+  jae .zero      # idx > ub   (jae is for unsigned and jge is for signed)
+
+  mov eax, 1
+  jmp .ret_block
+
+.zero:
+  xor eax, rax
+
+.ret_block:
+  leave
+  ret
+
+
+.section .text
+.global getelement
+.type getelement, @function
+
+# Function Parameters:
+#   rdi=&arr (ptr to the dynarr struct)
+#   rsi=idx  (idx, size_t)
+getelement:
+  push rbp
+  mov  rbp, rsp
+  push rbx
+  push r13
+  push r14
+  push r15
+
+  test rdi, rdi     # !arr
+  jz   .null_ret
+
+  mov  rbx, QWORD PTR [rdi + 8*0]      #  arr->ptr
+  test rbx, rbx                        # !arr->ptr
+  jz   .null_ret
+
+# Preserve rdi and rsi before calling boundcheck
+#   r14=&arr, r15=idx
+  mov r14, rdi
+  mov r15, rsi
+
+  # Arg3 (rdx=idx)
+  mov rdx, rsi
+
+  # Arg2 (rsi=arr->count)
+  mov rsi, QWORD PTR [rdi + 8*2]
+
+  # Arg1 (edi=0)
+  xor edi, edi      # not rdi because numbers are int by default, unless stated otherwise (integer literal suffixes)
+
+  call boundcheck
+  test eax, eax
+  jz   .null_ret
+
+  mov  r13, QWORD PTR [r14 + 8*1]     # arr->elem_size
+  imul r13, r15                       # r13 = idx * arr->elem_size
+  add  rbx, r13
+  mov  rax, rbx
+  jmp  .ret_block
+
+.null_ret:
+  xor rax, rax      # NULL
+
+.ret_block:
+  pop r15
+  pop r14
+  pop r13
+  pop rbx
+  leave
+  ret
+
