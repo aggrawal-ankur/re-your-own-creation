@@ -375,7 +375,7 @@ getelement:
   mov rsi, QWORD PTR [rdi + 8*2]
 
   # Arg1 (edi=0)
-  xor edi, edi      # not rdi because numbers are int by default, unless stated otherwise (integer literal suffixes)
+  xor rdi, rdi      # not rdi because numbers are int by default, unless stated otherwise (integer literal suffixes), but we need rdi because boundcheck assumes lb is size_t
 
   call boundcheck
   test eax, eax
@@ -395,6 +395,114 @@ getelement:
   pop r14
   pop r13
   pop rbx
+  leave
+  ret
+
+
+.section .text
+.global isempty
+.type isempty, @function
+
+# Function Parameters:
+#   rdi=&arr
+isempty:
+  push rbp
+  mov  rbp, rsp
+
+  mov  rcx, QWORD PTR [rdi + 8*2]     # arr->count
+  test rcx, rcx                       # !arr->count
+  jz   .empty
+  mov eax, -12      # ISNOT_EMPTY
+  jmp .ret_block
+
+.empty:
+  mov eax, -11      # IS_EMPTY
+
+.ret_block:
+  leave
+  ret
+
+
+.section .text
+.global setidx
+.type setidx, @function
+
+# Function Parameters:
+#   rdi= &arr
+#   rsi= &value_to_set
+#   rdx= idx
+setidx:
+  push rbp
+  mov  rbp, rsp
+  push r13
+  push r14
+  push r15
+  push rbx
+
+  test rdi, rdi            # !arr
+  jz   .init_first
+
+  mov  rcx, QWORD PTR [rdi + 8*2]    # arr->count
+  test rcx, rcx                      # !arr->count
+  jz   .init_first
+
+# Should I reuse rcx to hold arr->capacity because arr->count can be loaded again from the memory and it is only used in boundcheck?
+#   My reasoning says that "a load from memory is not cheap when compared to using a register". Doesn't matter I repurpose rcx or use r8 to hold arr->capacity, I've to load from the memory.
+#   What does matters is that if I don't repurpose rcx, I can save one memory access later in boundcheck as I can directly use rcx to populate rsi.
+#   For this reason, I am chosing a separate register to hold arr->capacity
+  mov  r8, QWORD PTR [rdi + 8*3]     # arr->capacity
+  test r8, r8                        # !arr->capacity
+  jz   .init_first
+
+# Let's save rdi, rsi and rdx before resetting and calling boundcheck
+#   I never made it explicit that why I prefer numbered caller-saved registers (r12 - r15) more than the alphabets once.
+#   They improve clarity. They help me reason better.
+  mov r13, rdi
+  mov r14, rsi
+  mov r15, rdx
+
+# Prepare for boundcheck
+  # Arg3 (idx) is already set in rdx
+  # Arg2 (rsi=arr->count)
+  mov rsi, QWORD PTR [rdi + 8*2]
+
+  # Arg 1 (rdi=0)
+  xor rdi, rdi    # Although normal digits are considered ints unless stated otherwise, we can't use edi here because boundcheck expects a size_t value. Although it doesn't affect because 0 on zext or sext remains 0. But it is wrong principle-wise. If the callee expects size_t, pass size_t only. Because if -1 was passed, we know we are done because zero extension is implicit and we are gonna have 4.29b+ instead of -1. And I need to follow the principles.
+
+  call boundcheck
+  test eax, eax
+  jz   .invalid_idx
+
+# Prepare for memcpy
+  # Arg3 (rdx=arr->elem_size)
+  mov rdx, QWORD PTR [r13 + 8*1]    # arr->elem_size
+
+  # Arg2 (rsi=&value)
+  mov rsi, r14
+
+  # Arg1 (rdi=dest)
+  # I am repurposing r15 to hold idx*elem_size because idx is not used after that.
+  imul r15, rdx                      # r15=idx*arr->elem_size
+  mov  rdi, QWORD PTR [r13 + 8*0]    # arr->ptr
+  add  rdi, r15                      # rdi += r15
+
+  call memcpy@PLT
+  xor  eax, eax     # SUCCESS
+  jmp .ret_block
+
+.init_first:
+  mov eax, -5
+  jmp .ret_block
+
+.invalid_idx:
+  mov eax, -8
+  jmp .ret_block
+
+.ret_block:
+  pop rbx
+  pop r15
+  pop r14
+  pop r13
   leave
   ret
 
