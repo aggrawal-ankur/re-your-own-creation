@@ -161,3 +161,13 @@ Based on the previous paragraph, I had a question. ***If a procedure returned in
 ***That's why, if the callee returns in rax, the caller must test eax only.***
 
 Last, `NULL` or `(void*)0` is `0` in x64-asm.
+
+# Day 4 Takeaways
+
+**January 31, 2025**
+
+**10:44 PM**
+
+Woke up relaxed. Started the day incredibly great. Wrote isempty and setidx. Although the implementation itself was easy, I found my way to some confusions which took about an hour. Then I reached bytecopy with 2 more similar functions: merge and export2dyn. This disturbed me enough. I started cleanup and as usual, it didn't end up well. Then **IND vs NZ T20** last match was today, so ~1.5h there. Then I continued refactoring and it got complicated and that's how I've soared the back pain which was very minimal since last night.
+
+I need to write a changelog of all the changes because it is necessary that's time. I am not making things big unnecessarily, I just want to close this thread properly. But I am done for today.
