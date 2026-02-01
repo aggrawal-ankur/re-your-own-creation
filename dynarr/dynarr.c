@@ -109,19 +109,18 @@ DynArrStatus insertidx(DynArr* arr, const void* value, size_t idx){
   if (!value) return -INVALID_PUSHREQUEST;
   if (boundcheck(0UL, arr->count, idx) != 1) return -INVALID_IDX;
 
-  if (arr->count == arr->capacity){
-    int res = extend(arr, 1);
-    if (res != SUCCESS) return res;
-  }
+  int res = extend(arr, 1);
+  if (res != SUCCESS) return res;
 
   void* dest = (char*)arr->ptr + (idx + 1)*arr->elem_size;
   void* src  = (char*)arr->ptr + idx*arr->elem_size;
   size_t bytes = (arr->count - idx) * arr->elem_size;
   memmove(dest, src, bytes);
 
-  setidx(arr, value, idx);
-  arr->count++;
+  res = setidx(arr, value, idx);
+  if (res != SUCCESS) return res;
 
+  arr->count++;
   return SUCCESS;
 }
 

@@ -512,3 +512,390 @@ setidx:
   leave
   ret
 
+
+.global mergedyn2dyn
+.type mergedyn2dyn, @function
+
+# Function Parameters:
+#   rdi=&src
+#   rsi=&dest
+mergedyn2dyn:
+  push rbp
+  mov  rbp, rsp
+  push r14
+  push r15
+
+  test rdi, rdi    # !src
+  jz   .init_first
+
+  mov  rcx, QWORD PTR [rdi + 8*0]
+  test rcx, rcx    # !src->ptr
+  jz   .init_first
+
+  test rsi, rsi    # !dest
+  jz   .init_first
+
+  mov  rcx, QWORD PTR [rdi + 8*0]
+  test rcx, rcx    # !dest.ptr
+  jz   .init_first
+
+  # Even though these values are active in the 3rd region, I'd prefer loading from memory
+  mov  rcx, QWORD PTR [rdi + 8*1]    # src->elem_size
+  mov  r8,  QWORD PTR [rsi + 8*1]    # dest->elem_size
+  test rcx, r8
+  jnz  .types_dont_match
+
+# extend; preserve rdi, rsi
+  mov r14, rdi
+  mov r15, rsi
+
+  # Arg1 (rdi=dest=rsi)
+  mov rdi, rsi
+
+  # Arg2 (rsi=src->count)
+  mov rsi, QWORD PTR [r14 + 8*2]
+
+  call extend
+  test eax, eax
+  jnz  .ret_block
+
+# memcpy: 3 args (dptr, src->ptr, bytes): all fresh loads
+  # Arg2 (rsi=src->ptr)
+  mov rsi, QWORD PTR [r14 + 8*0]
+
+  # Arg3 (rdx=src->count * src->elem_size)
+  mov  rcx, QWORD PTR [r14 + 8*1]    # src->elem_size
+  mov  rdx, QWORD PTR [r14 + 8*2]    # src->count
+  imul rdx, rcx
+
+  # Arg1 (rdi=dptr)
+  mov  rcx, QWORD PTR [r15 + 8*1]    # dest->elem_size
+  mov  r8,  QWORD ptr [r15 + 8*2]    # dest->count
+  imul r8,  rcx                      # r8 = r8*rcx
+  mov  rdi, r15
+  add  rdi, r8
+
+  call memcpy@PLT
+
+  mov rcx, QWORD PTR [r15 + 8*2]
+  add rcx, [r14 + 8*2]               # dest->count += src->count
+  mov QWORD PTR [r15 + 8*2], rcx
+
+  xor eax, eax    # SUCCESS
+
+.init_first:
+  mov eax, -5
+  jmp .ret_block
+
+.types_dont_match:
+  mov eax, -9
+
+.ret_block:
+  pop r15
+  pop r14
+  leave
+  ret
+
+
+.global export2stack
+.type export2stack, @function
+
+# Function Parameters:
+#   rdi=&dynarr
+#   rsi=**stackarr
+export2stack:
+  push rbp
+  mov  rbp, rsp
+
+  test rdi, rdi    # !dynarr
+  jz   .init_first
+
+  mov  rcx, QWORD PTR [rdi + 8*0]
+  test rcx, rcx    # !dynarr->ptr
+
+# memcpy; no need to save anything because nothing exists beyond this memcpy call.
+  # Arg2 (rsi=dynarr->ptr)
+  mov rsi, QWORD PTR [rdi + 8*0]
+
+  # Arg3 (rdx=bytes)
+  mov  rcx, QWORD PTR [rdi + 8*1]    # dynarr->elem_size
+  imul rcx, [rdi + 8*2]              # dynarr->count
+
+  # Arg1 (rdi=*stackarr)
+  mov rdi, [rdi]    # I am unsure about this though!
+
+  call memcpy@PLT
+
+  xor eax, eax
+  jmp .ret_block
+
+.init_first:
+  mov eax, -5
+
+.ret_block:
+  leave
+  ret
+
+
+.global insertidx
+.type insertidx, @function
+
+# Function Parameters
+#   rdi = &arr
+#   rsi = &value
+#   rdx = idx
+insertidx:
+  push rbp
+  mov  rbp, rsp
+  push r13
+  push r14
+  push r15
+  sub  rsp, 8
+
+  test rdi, rdi       # !arr
+  jz   .init_first
+
+  mov  rcx, QWORD PTR [rdi + 8*0]    # arr->ptr
+  test rcx, rcx                      # !arr->ptr
+
+  test rsi, rsi                      # !value
+  jz   .invalid_pushreq
+
+# boundcheck; preserve rdi, rsi and rdx
+  mov r13, rdi
+  mov r14, rsi
+  mov r15, rdx
+
+  # Arg3 (rdx=idx) already set
+  # Arg2 (rsi=arr->count)
+  mov rsi, QWORD PTR [rdi + 8*2]
+
+  # Arg1 (rdi=0)
+  xor rdi, rdi
+
+  call boundcheck
+  test eax, eax
+  jz   .invalid_idx
+
+# extend
+  mov rdi, r13
+  mov rsi, 1
+
+  call extend
+  test eax, eax
+  jnz  .ret_block
+
+# memmove(dest, src, idx)
+# Since arr->elem_size is used frequently, I'd load it in r8
+  mov r8, [r13 + 8*1]
+
+  # Compute and set arg1 (rdi=dest)
+  mov  rcx, r15    # idx
+  add  rcx, 1      # idx+1
+  imul rcx, r8     # (idx+1)*arr->elem_size
+  mov  rdi, r13    # base
+  add  rdi, rcx    # base + offset
+
+  # Compute and set arg2 (rsi=src)
+  mov  rcx, r15    # idx
+  imul rcx, r8     # rcx=idx*elem_size
+  mov  rsi, r13    # base
+  add  rsi, rcx    # base + offset
+
+  # Compute and set arg3 (rdx=bytes)
+  mov  rcx, [r13 + 8*2]    # arr->count
+  sub  rcx, r15            # rcx = rcx - idx
+  imul rcx, r8             # rcx = rcx*elem_size
+
+  call memmove@PLT
+
+# setidx(&ar, &value, idx)
+  mov rdi, r13
+  mov rsi, r14
+  mov rdx, r15
+
+  call setidx
+  jnz  .ret_block
+
+  mov rcx, QWORD PTR [rdi + 8*2]    # arr->count
+  add rcx, 1
+  mov QWORD PTR [rdi + 8*2], rcx    # arr->count++
+  xor eax, eax    # SUCCESS
+  jmp .ret_block
+
+.init_first:
+  mov eax, -5
+  jmp .ret_block
+
+.invalid_pushreq:
+  mov eax, -9
+  jmp .ret_block
+
+.invalid_idx:
+  mov eax, -8
+  jmp .ret_block
+
+.ret_block:
+  add rsp, 8
+  pop r15
+  pop r14
+  pop r13
+  leave
+  ret
+
+
+.global removeidx
+.typre removeidx, @function
+
+# Function Parameters:
+#   rdi=&arr
+#   rsi=idx
+removeidx:
+  push rbp
+  mov  rbp, rsp
+  push r13
+  push r14
+  push r15
+  add  rsp, 8
+
+  test rdi, rdi
+  jz   .init_first
+
+  mov  rcx, [rdi + 8*]    # arr->ptr
+  test rcx, rcx           # !arr->ptr
+
+# boundcheck; preserve rdi, rsi and rdx
+  mov r13, rdi
+  mov r14, rsi
+  mov r15, rdx
+
+  # Arg3 (rdx=idx)
+  mov rdx, rsi
+
+  # Arg2 (rsi=arr->count)
+  mov rsi, [rdi + 8*2]
+
+  # Arg1 (rdi=0)
+  xor rdi, rdi
+
+  call boundcheck
+  test eax, eax
+  jz   .invalid_idx
+
+# memmove(dest, src, bytes)
+  mov r8, QWORD PTR [rdi + 8*1]    # arr->elem_size
+
+  # Arg1 (rdi=dest)
+  mov  rcx, r15    # idx
+  imul rcx, r8     # rcx=idx*elem_size
+  mov  rdi, r13    # base
+  add  rdi, rcx    # base + offset
+
+  # Arg2 (rsi=src)
+  mov  rcx, r15    # idx
+  add  rcx, 1      # idx+1
+  imul rcx, r8     # rcx=(idx+1)*elem_size
+  mov  rsi, r13    # base
+  add  rsi, rcx    # base + offset
+
+  # Arg3 (rdx=bytes)
+  mov  rdx, QWORD PTR [r13 + 8*2]    # arr->count
+  sub  rdx, r15                      # arr->count - idx
+  sub  rdx, 1                        # arr->count - idx - 1
+  imul rdx, r8                       # bytes=rcx*elem_size
+
+  call memmove@PLT
+
+  mov rcx, QWORD PTR [r13 + 8*2]
+  sub rcx, 1
+  mov QWORD PTR [r13 + 8*2], rcx     # arr->count--
+
+  xor eax, eax    # SUCCESS
+  jmp .ret_block
+
+.init_first:
+  mov eax, -5
+  jmp .ret_block
+
+.invalid_idx:
+  mov eax, -8
+  jmp .ret_block
+
+.ret_block:
+  add rsp, 8
+  pop r15
+  pop r14
+  pop r13
+  leave
+  ret
+
+
+.global clearArr
+.type clearArr, @function
+
+# Funciton Parameters:
+#   rdi=&arr
+clearArr:
+  push rbp
+  mov  rbp, rsp
+
+  test rdi, rdi
+  jz   .init_first
+
+  mov  rcx, QWORD PTR [rdi + 8*0]
+  test rcx, rcx
+  jz   .init_first
+
+  mov QWORD PTR [rdi + 8*0], 0    # arr->ptr
+  mov QWORD PTR [rdi + 8*2], 0    # arr->count
+  mov QWORD PTR [rdi + 8*1], 0    # arr->elem_size
+
+  xor eax, eax
+  jmp .ret_block
+
+.init_first:
+  mov eax, -5
+
+.ret_block:
+  leave
+  ret
+
+
+.global freeArr
+.type freeArr, @function
+
+# Function Parameters:
+#   rdi=&arr
+freeArr:
+  push rbp
+  mov  rbp, rsp
+  push rbx
+  sub rsp, 8
+
+  test rdi, rdi
+  jz   .init_first
+
+  mov  rcx, QWORD PTR [rdi + 8*0]
+  test rcx, rcx
+  jz   .init_first
+
+  mov  rbx, rdi    # PRESERVE rdi
+  call free@PLT
+
+  mov QWORD PTR [rdi + 8*0], 0
+  mov QWORD PTR [rdi + 8*1], 0
+  mov QWORD PTR [rdi + 8*2], 0
+  mov QWORD PTR [rdi + 8*3], 0
+
+  xor eax, eax
+  jmp .ret_block
+
+.init_first:
+  mov eax, -5
+
+.ret_block:
+  add rsp, 8
+  pop rbx
+  leave
+  ret
+
