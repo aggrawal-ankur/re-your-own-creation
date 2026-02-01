@@ -1,7 +1,7 @@
 #include "dynarr.h"
 
 DynArrStatus init(DynArr* arr, size_t elem_size, size_t cap){
-  if (!arr->capacity) return -ALREADY_INIT;
+  if (arr->capacity != 0) return -ALREADY_INIT;
   if (elem_size == 0 || cap == 0) return -INVALID_SIZES;
   if (cap > SIZE_MAX/elem_size)   return -SIZEMAX_OVERFLOW;
 
@@ -37,10 +37,8 @@ DynArrStatus pushOne(DynArr* arr, const void* value){
   if (!arr || !arr->ptr) return -INIT_FIRST;
   if (!value) return -INVALID_PUSHREQUEST;
 
-  if (arr->count+1 > arr->capacity){
-    int res = extend(arr, 1);
-    if (res != SUCCESS) return res;
-  }
+  int res = extend(arr, 1);
+  if (res != SUCCESS) return res;
 
   void* dest = (char*)arr->ptr + (arr->count * arr->elem_size);
   memcpy(dest, value, arr->elem_size);
