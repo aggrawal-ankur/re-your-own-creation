@@ -164,7 +164,7 @@ Last, `NULL` or `(void*)0` is `0` in x64-asm.
 
 # Day 4 Takeaways
 
-**January 31, 2025**
+**January 31, 2026**
 
 **10:44 PM**
 

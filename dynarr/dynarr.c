@@ -2,8 +2,8 @@
 
 DynArrStatus init(DynArr* arr, size_t elem_size, size_t cap){
   if (!arr->capacity) return -ALREADY_INIT;
-  if (!elem_size || !cap) return -INVALID_SIZES;
-  if (cap > SIZE_MAX/elem_size) return -SIZEMAX_OVERFLOW;
+  if (elem_size == 0 || cap == 0) return -INVALID_SIZES;
+  if (cap > SIZE_MAX/elem_size)   return -SIZEMAX_OVERFLOW;
 
   void* ptr = malloc(cap * elem_size);
   if (!ptr) return -MALLOC_FAILED;
@@ -50,8 +50,8 @@ DynArrStatus pushOne(DynArr* arr, const void* value){
 }
 
 DynArrStatus pushMany(DynArr* arr, const void* elements, size_t count){
-  if (!arr || !arr->ptr)   return -INIT_FIRST;
-  if (!elements || !count) return -INVALID_PUSHREQUEST;
+  if (!arr || !arr->ptr) return -INIT_FIRST;
+  if (!elements || count == 0) return -INVALID_PUSHREQUEST;
 
   int res = extend(arr, count);
   if (res != SUCCESS) return res;
@@ -79,7 +79,7 @@ DynArrStatus setidx(DynArr* arr, const void* value, size_t idx){
   if (!value) return -INVALID_PUSHREQUEST;
   if (boundcheck(0UL, arr->count, idx) != 1) return -INVALID_IDX;
 
-  void  *dest = (char*)arr->ptr + (idx*arr->elem_size);
+  void *dest = (char*)arr->ptr + (idx*arr->elem_size);
   memcpy(dest, value, arr->elem_size);
   return SUCCESS;
 }
