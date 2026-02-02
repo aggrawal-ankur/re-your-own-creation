@@ -14,13 +14,13 @@ init:
   mov  rbp, rsp    # new base-ptr for current procedure
   # No stack space required; No callee-saved register required
 
-# if (arr->capacity != 0)
-  mov  rcx, QWORD PTR [rdi + 8*3]     # arr->capacity
-  test rcx, rcx                       # arr->capacity != 0
+# if (arr->ptr != 0)
+  mov  rcx, QWORD PTR [rdi + 8*0]    # arr->ptr
+  test rcx, rcx                      # arr->ptr != 0
   jnz  .already_init
 
-# if (elem_size == 0 || cap == 0)
-  test rsi, rsi        # elem_size == 0
+# if (elem_size == 0)
+  test rsi, rsi
   jz   .invalid_sizes
 
 # if (cap == 0)
@@ -87,16 +87,13 @@ extend:
 
   # Even though arr->ptr is required in the two ending regions, it's far, which is why I am not using a callee-saved register.
   mov  rcx, QWORD PTR [rdi + 8*0]    # arr->ptr
-  test rcx, rcx            # !arr->ptr
+  test rcx, rcx                      # !arr->ptr
 
   # Repurposing rcx for arr->capacity
   mov  rcx, QWORD PTR [rdi + 8*3]    # arr->capacity
-  test rcx, rcx                      # !arr->capacity
-  jz   .init_first
-
-  mov  r10, QWORD PTR [rdi + 8*2]     # arr->count
-  add  r10, rsi                       # arr->count+add_bytes (becomes `total`, later)
-  cmp  r10, rcx     # (arr->count+add_bytes <= arr->capacity)
+  mov  r10, QWORD PTR [rdi + 8*2]    # arr->count
+  add  r10, rsi                      # arr->count+add_bytes (becomes `total`, later)
+  cmp  r10, rcx                      # (arr->count+add_bytes <= arr->capacity)
   jb .success
 
 # Now we need space for two variables: (total, cap)
@@ -121,7 +118,7 @@ extend:
 
   # Arg2 (rsi=cap*elem_size)
   mov  rsi, QWORD PTR [rdi + 8*1]    # rsi = arr->elem_size
-  imul rsi, rcx            # rsi = arr->elem_size*cap   (rcx=new computed capacity)
+  imul rsi, rcx                      # rsi = arr->elem_size*cap   (rcx=new computed capacity)
 
   # Arg1 (rdi=arr->ptr)
   mov  rdi, QWORD PTR [rdi + 8*0]    # rdi = &arr->ptr
@@ -169,8 +166,8 @@ pushOne:
   jz .init_first
 
   # arr->ptr is only active in this region, so no long lifetime
-  mov  rcx, QWORD PTR [rdi + 8*0]     #  arr->ptr
-  test rcx, rcx                       # !arr->ptr
+  mov  rcx, QWORD PTR [rdi + 8*0]    #  arr->ptr
+  test rcx, rcx                      # !arr->ptr
   jz   .init_first
 
   test rsi, rsi     # !value
@@ -188,9 +185,9 @@ pushOne:
   # Arg2 (rsi=1)
   mov  rsi, 1
 
-  call extend     # extend(arr, 1)
+  call extend      # extend(arr, 1)
   test eax, eax
-  jnz  .ret_block     # No need to set rax as it is already set with appropriate return value
+  jnz  .ret_block  # No need to set rax as it is already set with appropriate return value
 
 # Now comes memcpy, which takes 3 args (dest, src, bytes)
 #   rsi=r15=&value     (src)
@@ -383,11 +380,11 @@ getelement:
   mov rsi, QWORD PTR [rdi + 8*2]
 
   # Arg1 (rdi=0)
-  xor rdi, rdi      # not rdi because numbers are int by default, unless stated otherwise (integer literal suffixes), but we need rdi because boundcheck expects lb is a size_t value
+  xor rdi, rdi    # not rdi because numbers are int by default, unless stated otherwise (integer literal suffixes), but we need rdi because boundcheck expects lb is a size_t value
 
   call boundcheck
   test eax, eax
-  jz   .null_ret    # NULL
+  jz   .invalid_idx    # NULL
 
   # Calculate the ptr_to_idx
   mov  rcx, QWORD PTR [r14 + 8*1]    # arr->elem_size
@@ -396,8 +393,8 @@ getelement:
   add  rax, rcx
   jmp  .ret_block
 
-.null_ret:
-  xor rax, rax      # NULL
+.invalid_idx:
+  xor rax, rax    # NULL
 
 .ret_block:
   pop r15
@@ -423,7 +420,7 @@ isempty:
   jmp  .ret_block
 
 .empty:
-  mov eax, 1       # 1 for empty
+  mov eax, 1    # 1 for empty
 
 .ret_block:
   leave
@@ -601,7 +598,7 @@ mergedyn2dyn:
 
 # Function Parameters:
 #   rdi=&dynarr
-#   rsi=**stackarr
+#   rsi=*stackarr
 export2stack:
   push rbp
   mov  rbp, rsp
@@ -622,7 +619,7 @@ export2stack:
   imul rcx, QWORD PTR [rdi + 8*2]    # dynarr->count
 
   # Arg1 (rdi=*stackarr)
-  mov rdi, QWORD PTR [rsi]           # I am unsure about this though!
+  mov rdi, QWORD PTR rsi
 
   call memcpy@PLT
 

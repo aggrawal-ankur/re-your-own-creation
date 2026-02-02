@@ -1,7 +1,7 @@
 #include "dynarr.h"
 
 DynArrStatus init(DynArr* arr, size_t elem_size, size_t cap){
-  if (arr->capacity != 0) return -ALREADY_INIT;
+  if (arr->ptr) return -ALREADY_INIT;    // equivalent to (arr->ptr != NULL)
   if (elem_size == 0 || cap == 0) return -INVALID_SIZES;
   if (cap > SIZE_MAX/elem_size)   return -SIZEMAX_OVERFLOW;
 
@@ -65,7 +65,7 @@ int boundcheck(size_t lb, size_t ub, size_t idx){ return (idx >= lb && idx < ub)
 
 const void* getelement(const DynArr* arr, size_t idx){
   if (!arr || !arr->ptr) return NULL;
-  if (boundcheck(0UL, arr->count, idx)) return NULL;
+  if (boundcheck(0UL, arr->count, idx) != 1) return NULL;
 
   return ((char*)arr->ptr + (idx * arr->elem_size));
 }
@@ -97,10 +97,10 @@ DynArrStatus mergedyn2dyn(const DynArr* src, DynArr* dest){
   return SUCCESS;
 }
 
-DynArrStatus export2stack(const DynArr* dynarr, void** stackarr){
+DynArrStatus export2stack(const DynArr* dynarr, void* stackarr){
   if (!dynarr || !dynarr->ptr) return -INIT_FIRST;
 
-  memcpy(*stackarr, dynarr->ptr, dynarr->count * dynarr->elem_size);
+  memcpy(stackarr, dynarr->ptr, dynarr->count * dynarr->elem_size);
   return SUCCESS;
 }
 

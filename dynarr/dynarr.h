@@ -67,7 +67,7 @@ DynArrStatus removeidx(DynArr* arr, size_t idx);
 DynArrStatus mergedyn2dyn(const DynArr* src, DynArr* dest);
 
 // Export a dynamic array to a stack-allocated array
-DynArrStatus export2stack(const DynArr* dynarr, void** stackarr);
+DynArrStatus export2stack(const DynArr* dynarr, void* stackarr);
 
 // Makes the array reusable
 DynArrStatus clearArr(DynArr* arr);
