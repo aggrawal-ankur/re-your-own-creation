@@ -47,25 +47,25 @@ init:
   mov QWORD PTR [rcx + 8*3], rcx     # arr->capacity  (rcx)
 
   xor rax, rax      # rax=SUCCESS (0)
-  jmp .ret_block
+  jmp .ret_block_p1
 
 .already_init:
   mov eax, -1
-  jmp .ret_block
+  jmp .ret_block_p1
 
 .invalid_sizes:
   mov eax, -2
-  jmp .ret_block
+  jmp .ret_block_p1
 
 .sizemax_overflow:
   mov eax, -3
-  jmp .ret_block
+  jmp .ret_block_p1
 
 .malloc_failed:
   mov eax, -4
-  jmp .ret_block
+  jmp .ret_block_p1
 
-.ret_block:
+.ret_block_p1:
   leave
   ret
 
@@ -83,18 +83,19 @@ extend:
   push r13
 
   test rdi, rdi       # !arr
-  jz   .init_first
+  jz   .init_first_p2
 
   # Even though arr->ptr is required in the two ending regions, it's far, which is why I am not using a callee-saved register.
   mov  rcx, QWORD PTR [rdi + 8*0]    # arr->ptr
   test rcx, rcx                      # !arr->ptr
+  jz   .init_first_p2
 
   # Repurposing rcx for arr->capacity
   mov  rcx, QWORD PTR [rdi + 8*3]    # arr->capacity
   mov  r10, QWORD PTR [rdi + 8*2]    # arr->count
   add  r10, rsi                      # arr->count+add_bytes (becomes `total`, later)
   cmp  r10, rcx                      # (arr->count+add_bytes <= arr->capacity)
-  jb .success
+  jb .success_p2
 
 # Now we need space for two variables: (total, cap)
 #   `total` is already computed in r10, and rcx has arr->capacity.
@@ -129,20 +130,20 @@ extend:
 
   mov QWORD PTR [r13 + 8*0], rax    # arr->ptr = tmp
   mov QWORD PTR [r13 + 8*3], r12    # arr->capacity = cap
-  jmp .success
+  jmp .success_p2
 
-.init_first:
+.init_first_p2:
   mov eax, -5
-  jmp .ret_block
+  jmp .ret_block_p2
 
 .realloc_failed:
   mov eax, -6
-  jmp .ret_block
+  jmp .ret_block_p2
 
-.success:
+.success_p2:
   xor eax, eax
 
-.ret_block:
+.ret_block_p2:
   # Release memory in opposite order
   pop r13
   pop r12
@@ -163,15 +164,15 @@ pushOne:
   push r15
 
   test rdi, rdi      # !arr
-  jz .init_first
+  jz .init_first_p3
 
   # arr->ptr is only active in this region, so no long lifetime
   mov  rcx, QWORD PTR [rdi + 8*0]    #  arr->ptr
   test rcx, rcx                      # !arr->ptr
-  jz   .init_first
+  jz   .init_first_p3
 
   test rsi, rsi     # !value
-  jz   .invalid_pushreq
+  jz   .invalid_pushreq_p3
 
 # Note: Earlier there was an if block which decided whether extend should be called. I've removed it because the same check happens inside extend. It doesn't make sense.
 
@@ -187,7 +188,7 @@ pushOne:
 
   call extend      # extend(arr, 1)
   test eax, eax
-  jnz  .ret_block  # No need to set rax as it is already set with appropriate return value
+  jnz  .ret_block_p3  # No need to set rax as it is already set with appropriate return value
 
 # Now comes memcpy, which takes 3 args (dest, src, bytes)
 #   rsi=r15=&value     (src)
@@ -216,17 +217,17 @@ pushOne:
   mov QWORD PTR [r14 + 8*2], rcx
 
   xor eax, eax      # SUCCESS
-  jmp .ret_block
+  jmp .ret_block_p3
 
-.init_first:
+.init_first_p3:
   mov eax, -5
-  jmp .ret_block
+  jmp .ret_block_p3
 
-.invalid_pushreq:
+.invalid_pushreq_p3:
   mov eax, -7
-  jmp .ret_block
+  jmp .ret_block_p3
 
-.ret_block:
+.ret_block_p3:
   pop r15
   pop r14
   leave
@@ -249,17 +250,17 @@ pushMany:
   sub  rsp, 8       # Dummy push to realign the stack at a 16 divisible boundary
 
   test rdi, rdi     # !arr
-  jz   .init_first
+  jz   .init_first_p4
 
   mov  rcx, QWORD PTR [rdi + 8*0]    # arr->ptr
   test rcx, rcx                      # !arr->ptr
-  jz   .init_first
+  jz   .init_first_p4
 
   test rsi, rsi             # !elements (arg2)
-  jz   .invalid_pushreq
+  jz   .invalid_pushreq_p4
 
   test rdx, rdx             # count==0 (arg3)
-  jz   .invalid_count
+  jz   .invalid_pushreq_p4
 
 # Before we call extend, we must preserve rdi, rsi and rdx, as they're caller-saved registers and pushMany is about to become a caller
   mov r13, rdi    # &arr
@@ -272,7 +273,7 @@ pushMany:
 
   call extend
   test eax, eax      # res != SUCCESS
-  jnz  .ret_block    # No need to set eax, the call itself sets it
+  jnz  .ret_block_p4    # No need to set eax, the call itself sets it
 
 # memcpy(dest, src, bytes)
 #   It takes 3 args and none of them are loaded yet.
@@ -301,17 +302,17 @@ pushMany:
   mov QWORD PTR [r13 + 8*2], rcx    # update
 
   xor eax, eax    # SUCCESS
-  jmp .ret_block
+  jmp .ret_block_p4
 
-.init_first:
+.init_first_p4:
   mov eax, -5
-  jmp .ret_block
+  jmp .ret_block_p4
 
-.invalid_pushreq:
+.invalid_pushreq_p4:
   mov eax, -7
-  jmp .ret_block
+  jmp .ret_block_p4
 
-.ret_block:
+.ret_block_p4:
 # Release memory in opposite order of reservation
   add rsp, 8
   pop r15
@@ -332,19 +333,19 @@ boundcheck:
   push rbp
   mov  rbp, rsp
 
-  cmp rdx, lb
+  cmp rdx, rdi
   jb .zero       # idx < lb   (jb is for unsigned and jl is for signed)
 
   cmp rdx, rsi
   jae .zero      # idx > ub   (jae is for unsigned and jge is for signed)
 
   mov eax, 1
-  jmp .ret_block
+  jmp .ret_block_p5
 
 .zero:
-  xor eax, rax
+  xor eax, eax
 
-.ret_block:
+.ret_block_p5:
   leave
   ret
 
@@ -384,19 +385,19 @@ getelement:
 
   call boundcheck
   test eax, eax
-  jz   .invalid_idx    # NULL
+  jz   .null_ret    # NULL
 
   # Calculate the ptr_to_idx
   mov  rcx, QWORD PTR [r14 + 8*1]    # arr->elem_size
   imul rcx, r15                      # rcx = idx * arr->elem_size
   mov  rax, QWORD PTR [r14 + 8*0]    # arr->ptr
   add  rax, rcx
-  jmp  .ret_block
+  jmp  .ret_block_p6
 
-.invalid_idx:
+.null_ret:
   xor rax, rax    # NULL
 
-.ret_block:
+.ret_block_p6:
   pop r15
   pop r14
   leave
@@ -417,12 +418,12 @@ isempty:
   jz   .empty
 
   xor  eax, eax    # 0 for allocated
-  jmp  .ret_block
+  jmp  .ret_block_p7
 
 .empty:
   mov eax, 1    # 1 for empty
 
-.ret_block:
+.ret_block_p7:
   leave
   ret
 
@@ -443,18 +444,18 @@ setidx:
   sub  rsp, 8       # Dummy memory for rsp alignment
 
   test rdi, rdi     # !arr
-  jz   .init_first
+  jz   .init_first_p8
 
   mov  rcx, QWORD PTR [rdi + 8*0]    # arr->ptr
   test rcx, RCX                      # !arr->ptr
-  jz   .init_first
+  jz   .init_first_p8
 
   test rsi, rsi                      # !value
-  jz   .invalid_pushreq
+  jz   .invalid_pushreq_p8
 
   mov  rcx, QWORD PTR [rdi + 8*2]    # arr->count
   test rcx, rcx                      # !arr->count
-  jz   .init_first
+  jz   .init_first_p8
 
 # boundcheck; preserve rdi, rsi, rdx
   mov r13, rdi
@@ -471,7 +472,7 @@ setidx:
 
   call boundcheck
   test eax, eax
-  jz   .invalid_idx
+  jz   .invalid_idx_p8
 
 # memcpy
   # Arg3 (rdx=arr->elem_size)
@@ -487,21 +488,21 @@ setidx:
 
   call memcpy@PLT
   xor  eax, eax   # SUCCESS
-  jmp .ret_block
+  jmp .ret_block_p8
 
-.init_first:
+.init_first_p8:
   mov eax, -5
-  jmp .ret_block
+  jmp .ret_block_p8
 
-.invalid_pushreq:
+.invalid_pushreq_p8:
   mov eax, -7
-  jmp .ret_block
+  jmp .ret_block_p8
 
-.invalid_idx:
+.invalid_idx_p8:
   mov eax, -8
-  jmp .ret_block
+  jmp .ret_block_p8
 
-.ret_block:
+.ret_block_p8:
   add rsp, 8
   pop r15
   pop r14
@@ -523,18 +524,18 @@ mergedyn2dyn:
   push r15
 
   test rdi, rdi    # !src
-  jz   .init_first
+  jz   .init_first_p9
 
   mov  rcx, QWORD PTR [rdi + 8*0]
   test rcx, rcx    # !src->ptr
-  jz   .init_first
+  jz   .init_first_p9
 
   test rsi, rsi    # !dest
-  jz   .init_first
+  jz   .init_first_p9
 
   mov  rcx, QWORD PTR [rsi + 8*0]
   test rcx, rcx    # !dest->ptr
-  jz   .init_first
+  jz   .init_first_p9
 
   # Even though these values are active in the 3rd region, I'd prefer loading from memory
   mov rcx, QWORD PTR [rdi + 8*1]    # src->elem_size
@@ -554,7 +555,7 @@ mergedyn2dyn:
 
   call extend
   test eax, eax
-  jnz  .ret_block
+  jnz  .ret_block_p9
 
 # memcpy: 3 args (dptr, src->ptr, bytes): all fresh loads
   # Arg2 (rsi=src->ptr)
@@ -577,16 +578,16 @@ mergedyn2dyn:
   mov QWORD PTR [r15 + 8*2], rcx
 
   xor eax, eax    # SUCCESS
-  jmp .ret_block
+  jmp .ret_block_p9
 
-.init_first:
+.init_first_p9:
   mov eax, -5
-  jmp .ret_block
+  jmp .ret_block_p9
 
 .types_dont_match:
   mov eax, -9
 
-.ret_block:
+.ret_block_p9:
   pop r15
   pop r14
   leave
@@ -604,11 +605,11 @@ export2stack:
   mov  rbp, rsp
 
   test rdi, rdi    # !dynarr
-  jz   .init_first
+  jz   .init_first_p10
 
   mov  rcx, QWORD PTR [rdi + 8*0]
   test rcx, rcx    # !dynarr->ptr
-  jz   .init_first
+  jz   .init_first_p10
 
 # memcpy; no need to save anything because nothing exists beyond this memcpy call.
   # Arg2 (rsi=dynarr->ptr)
@@ -619,17 +620,17 @@ export2stack:
   imul rcx, QWORD PTR [rdi + 8*2]    # dynarr->count
 
   # Arg1 (rdi=*stackarr)
-  mov rdi, QWORD PTR rsi
+  mov rdi, rsi
 
   call memcpy@PLT
 
   xor eax, eax
-  jmp .ret_block
+  jmp .ret_block_p10
 
-.init_first:
+.init_first_p10:
   mov eax, -5
 
-.ret_block:
+.ret_block_p10:
   leave
   ret
 
@@ -650,14 +651,14 @@ insertidx:
   sub  rsp, 8
 
   test rdi, rdi       # !arr
-  jz   .init_first
+  jz   .init_first_p11
 
   mov  rcx, QWORD PTR [rdi + 8*0]    # arr->ptr
   test rcx, rcx                      # !arr->ptr
-  jz   .init_first
+  jz   .init_first_p11
 
   test rsi, rsi                      # !value
-  jz   .invalid_pushreq
+  jz   .invalid_pushreq_p11
 
 # boundcheck; preserve rdi, rsi and rdx
   mov r13, rdi
@@ -673,7 +674,7 @@ insertidx:
 
   call boundcheck
   test eax, eax
-  jz   .invalid_idx
+  jz   .invalid_idx_p11
 
 # extend
   mov rdi, r13
@@ -681,7 +682,7 @@ insertidx:
 
   call extend
   test eax, eax
-  jnz  .ret_block
+  jnz  .ret_block_p11
 
 # memmove(dest, src, idx)
 # Since arr->elem_size is used frequently, but only before memmove, I'll assign r8 to it. No need for callee-saved register.
@@ -714,25 +715,25 @@ insertidx:
 
   call setidx
   test eax, eax
-  jnz  .ret_block
+  jnz  .ret_block_p11
 
   add QWORD PTR [r13 + 8*2], 1    # arr->count++
   xor eax, eax    # SUCCESS
-  jmp .ret_block
+  jmp .ret_block_p11
 
-.init_first:
+.init_first_p11:
   mov eax, -5
-  jmp .ret_block
+  jmp .ret_block_p11
 
-.invalid_pushreq:
+.invalid_pushreq_p11:
   mov eax, -7
-  jmp .ret_block
+  jmp .ret_block_p11
 
-.invalid_idx:
+.invalid_idx_p11:
   mov eax, -8
-  jmp .ret_block
+  jmp .ret_block_p11
 
-.ret_block:
+.ret_block_p11:
   add rsp, 8
   pop r15
   pop r14
@@ -754,11 +755,11 @@ removeidx:
   push r14
 
   test rdi, rdi
-  jz   .init_first
+  jz   .init_first_p12
 
   mov  rcx, [rdi + 8*0]   # arr->ptr
   test rcx, rcx           # !arr->ptr
-  jz   .init_first
+  jz   .init_first_p12
 
 # boundcheck; preserve rdi, rsi and rdx
   mov r13, rdi
@@ -775,7 +776,7 @@ removeidx:
 
   call boundcheck
   test eax, eax
-  jz   .invalid_idx
+  jz   .invalid_idx_p12
 
 # memmove(dest, src, bytes)
   mov r8, QWORD PTR [rdi + 8*1]    # arr->elem_size
@@ -803,17 +804,17 @@ removeidx:
   sub QWORD PTR [r13 + 8*2], 1       # arr->count--
 
   xor eax, eax    # SUCCESS
-  jmp .ret_block
+  jmp .ret_block_p12
 
-.init_first:
+.init_first_p12:
   mov eax, -5
-  jmp .ret_block
+  jmp .ret_block_p12
 
-.invalid_idx:
+.invalid_idx_p12:
   mov eax, -8
-  jmp .ret_block
+  jmp .ret_block_p12
 
-.ret_block:
+.ret_block_p12:
   pop r14
   pop r13
   leave
@@ -830,23 +831,23 @@ clearArr:
   mov  rbp, rsp
 
   test rdi, rdi
-  jz   .init_first
+  jz   .init_first_p13
 
   mov  rcx, QWORD PTR [rdi + 8*0]
   test rcx, rcx
-  jz   .init_first
+  jz   .init_first_p13
 
   mov QWORD PTR [rdi + 8*0], 0    # arr->ptr
   mov QWORD PTR [rdi + 8*2], 0    # arr->count
   mov QWORD PTR [rdi + 8*1], 0    # arr->elem_size
 
   xor eax, eax
-  jmp .ret_block
+  jmp .ret_block_p13
 
-.init_first:
+.init_first_p13:
   mov eax, -5
 
-.ret_block:
+.ret_block_p13:
   leave
   ret
 
@@ -863,11 +864,11 @@ freeArr:
   sub rsp, 8
 
   test rdi, rdi
-  jz   .init_first
+  jz   .init_first_p14
 
   mov  rcx, QWORD PTR [rdi + 8*0]
   test rcx, rcx
-  jz   .init_first
+  jz   .init_first_p14
 
   mov  rbx, rdi    # PRESERVE rdi
   call free@PLT
@@ -878,12 +879,12 @@ freeArr:
   mov QWORD PTR [rdi + 8*3], 0
 
   xor eax, eax
-  jmp .ret_block
+  jmp .ret_block_p14
 
-.init_first:
+.init_first_p14:
   mov eax, -5
 
-.ret_block:
+.ret_block_p14:
   add rsp, 8
   pop rbx
   leave
