@@ -20,6 +20,8 @@ If I were to optimize GCC's -O0 output, that'd have felt boring and non-living. 
 
 I don't know how I will manage the findings, so I am letting findings come first. Later, the solutions will emerge too.
 
+Thoughts here will be raw, except the technical stuff, which is either correct or incorrect, nothing in between.
+
 ## GCC Output
 
 ```bash
@@ -28,7 +30,7 @@ gcc dynarr/dynarr.c -S -masm=intel -O1 -fno-asynchronous-unwind-tables -fno-dwar
 
 Line stats: 483
 
-# First Impressions
+# First Impressions (Day 1)
 
 I've 2 immediate findings.
   1. Base pointer omission
@@ -39,7 +41,7 @@ Base pointer omission is something I'm aware of.
 ## Offset calculation
 
 Since the layout of the dynamic array is simple and consistent, there is no need for calculations like: `[rdi + 8*1]`. GCC is using:
-```nasm
+```asm
 mov	QWORD PTR [r12], rax
 mov	QWORD PTR 8[r12], rbx
 mov	QWORD PTR 24[r12], rbp
@@ -58,7 +60,7 @@ That's the first thing I am going to change.
 I've made the changes and running the tests again showed that pushOne had a segfault, which means memcpy failed. init and extend worked as expected.
 
 This line was wrong:
-```nasm
+```asm
 mov  rdi, QWORD PTR  8[r14]    # arr->ptr
 
 # Correct one
@@ -68,12 +70,33 @@ mov  rdi, QWORD PTR   [r14]    # arr->ptr
 That means, I wrongly updated one pattern for address calculation.
 
 pushOne works now and pushMany is fine. getelement is the next wrong piece, a segfault. I presume the same problem, and it is.
-```
+```asm
 mov  rax, QWORD PTR 8[r14]    # arr->ptr
 
 # Correct one
-mov  rdi, QWORD PTR   [r14]    # arr->ptr
-```
+mov  rdi, QWORD PTR  [r14]    # arr->ptr
 ```
 
 getelement is working, setidx is working, the next segfault is at mergedyn2dyn. It should be at memcpy and I presume the same issue, and it is. All tests passed.
+
+## Base Pointer Omission
+
+For this kind of stuff, I am gonna use my [knowledge-base](https://github.com/aggrawal-ankur/knowledge-base), which is also available on GitHub. It has been a long time updating it.
+
+**IMPORTANT NOTE: It already contains a directory for compiler optimizations which has tables I generated with ChatGPT when I was attempting to learn compiler optimization terms during Nov 21, 2025 to Dec 21, 2025. I will clear that stuff before I add anything.**
+
+**IMPORTANT NOTE: I've removed 6/7 files as the last one is literally about FPO only. Although it contains mostly unnecessary stuff and I've removed that part.**
+
+It can be found here: [compiler-optimizations/fpo.md](https://github.com/aggrawal-ankur/knowledge-base/blob/main/compiler-optimizations/fpo/fpo.md)
+
+---
+
+BPO/FPO implemented. 47 lines reduced, builds, runs, and passes all tests.
+
+---
+
+Done with the day.
+
+# Day 2
+
+***February 04, 2026***

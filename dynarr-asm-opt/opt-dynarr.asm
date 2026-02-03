@@ -10,8 +10,6 @@
 #   rsi=elem_size (data type's size, a 64-bit value)
 #   rdx=cap (capacity, a 64-bit value)
 init:
-  push rbp         # old base-ptr reservation
-  mov  rbp, rsp    # new base-ptr for current procedure
   push r13
   push r14
   push r15
@@ -31,7 +29,6 @@ init:
   jz   .invalid_sizes
 
 # if (cap > SIZE_MAX/elem_size) return SIZEMAX_OVERFLOW;
-# Instead of preventing the overflow, we let it happen and use the CARRY FLAG in RFLAGS register to decide what to do
   mov  rcx, rdx    # preserve rdx (cap) as mul will clobber rdx
   mov  rax, rdx    # rax = cap
   mul  rsi         # (rax * rsi) == (cap * elem_size)  Result => rdx:rax {rdx:64-127 bits, rax:0-63 bits}
@@ -78,7 +75,6 @@ init:
   pop r15
   pop r14
   pop r13
-  leave
   ret
 
 
@@ -89,8 +85,6 @@ init:
 #   rdi=&arr (pointer to the dynamic array struct)
 #   rsi=add_bytes (extra bytes required, size_t)
 extend:
-  push rbp         # preserve old base pointer
-  mov  rbp, rsp    # setup new base-ptr for current procedure
   push r12
   push r13
 
@@ -159,7 +153,6 @@ extend:
   # Release memory in opposite order
   pop r13
   pop r12
-  leave
   ret
 
 
@@ -170,8 +163,6 @@ extend:
 #   rdi=&arr   (ptr to the dynamic array struct)
 #   rsi=&value (ptr to the value to be pushed in the arr->ptr, type:void)
 pushOne:
-  push rbp
-  mov  rbp, rsp
   push r14
   push r15
 
@@ -240,7 +231,6 @@ pushOne:
 .ret_block_p3:
   pop r15
   pop r14
-  leave
   ret
 
 
@@ -252,8 +242,6 @@ pushOne:
 #   rsi=&elements (ptr to the memory where the elements to be pushed reside, type:void)
 #   rdx=count (number of elements, size_t)
 pushMany:
-  push rbp
-  mov  rbp, rsp
   push r13
   push r14
   push r15
@@ -328,7 +316,6 @@ pushMany:
   pop r15
   pop r14
   pop r13
-  leave
   ret
 
 
@@ -340,9 +327,6 @@ pushMany:
 #   rsi=ub   (upper bound)
 #   rdx=idx  (idx)
 boundcheck:
-  push rbp
-  mov  rbp, rsp
-
   cmp rdx, rdi
   jb .zero       # idx < lb   (jb is for unsigned and jl is for signed)
 
@@ -356,7 +340,6 @@ boundcheck:
   xor eax, eax
 
 .ret_block_p5:
-  leave
   ret
 
 
@@ -367,8 +350,6 @@ boundcheck:
 #   rdi=&arr (ptr to the dynarr struct)
 #   rsi=idx  (idx, size_t)
 getelement:
-  push rbp
-  mov  rbp, rsp
   push r14
   push r15
 
@@ -410,7 +391,6 @@ getelement:
 .ret_block_p6:
   pop r15
   pop r14
-  leave
   ret
 
 
@@ -420,9 +400,6 @@ getelement:
 # Function Parameters:
 #   rdi=&arr
 isempty:
-  push rbp
-  mov  rbp, rsp
-
   mov  rcx, QWORD PTR 16[rdi]    # arr->count
   test rcx, rcx                  # !arr->count
   jz   .empty
@@ -434,7 +411,6 @@ isempty:
   mov eax, 1          # 1 for empty
 
 .ret_block_p7:
-  leave
   ret
 
 
@@ -446,8 +422,6 @@ isempty:
 #   rsi= &value_to_set
 #   rdx= idx
 setidx:
-  push rbp
-  mov  rbp, rsp
   push r13
   push r14
   push r15
@@ -517,7 +491,6 @@ setidx:
   pop r15
   pop r14
   pop r13
-  leave
   ret
 
 
@@ -528,8 +501,6 @@ setidx:
 #   rdi=&src
 #   rsi=&dest
 mergedyn2dyn:
-  push rbp
-  mov  rbp, rsp
   push r14
   push r15
 
@@ -600,7 +571,6 @@ mergedyn2dyn:
 .ret_block_p9:
   pop r15
   pop r14
-  leave
   ret
 
 
@@ -611,9 +581,6 @@ mergedyn2dyn:
 #   rdi=&dynarr
 #   rsi=*stackarr
 export2stack:
-  push rbp
-  mov  rbp, rsp
-
   test rdi, rdi    # !dynarr
   jz   .init_first_p10
 
@@ -642,7 +609,6 @@ export2stack:
   mov eax, -5
 
 .ret_block_p10:
-  leave
   ret
 
 
@@ -654,8 +620,6 @@ export2stack:
 #   rsi = &value
 #   rdx = idx
 insertidx:
-  push rbp
-  mov  rbp, rsp
   push r13
   push r14
   push r15
@@ -749,7 +713,6 @@ insertidx:
   pop r15
   pop r14
   pop r13
-  leave
   ret
 
 
@@ -760,8 +723,6 @@ insertidx:
 #   rdi=&arr
 #   rsi=idx
 removeidx:
-  push rbp
-  mov  rbp, rsp
   push r13
   push r14
 
@@ -828,7 +789,6 @@ removeidx:
 .ret_block_p12:
   pop r14
   pop r13
-  leave
   ret
 
 
@@ -838,9 +798,6 @@ removeidx:
 # Funciton Parameters:
 #   rdi=&arr
 clearArr:
-  push rbp
-  mov  rbp, rsp
-
   test rdi, rdi
   jz   .init_first_p13
 
@@ -859,7 +816,6 @@ clearArr:
   mov eax, -5
 
 .ret_block_p13:
-  leave
   ret
 
 
@@ -869,10 +825,8 @@ clearArr:
 # Function Parameters:
 #   rdi=&arr
 freeArr:
-  push rbp
-  mov  rbp, rsp
   push rbx
-  sub rsp, 8
+  sub  rsp, 8
 
   test rdi, rdi
   jz   .init_first_p14
@@ -898,6 +852,5 @@ freeArr:
 .ret_block_p14:
   add rsp, 8
   pop rbx
-  leave
   ret
 
