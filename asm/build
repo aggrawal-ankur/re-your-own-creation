@@ -1,4 +1,6 @@
-as asm/dynarr.asm -o dynarr.o
-gcc -g -c main.c -o main.o
-gcc main.o dynarr.o -o main
-./main
+# Change directory to dynarr-asm
+
+as dynarr.asm -o dynarr.o
+gcc -g -c test.c -o test.o
+gcc test.o dynarr.o -o test
+./test

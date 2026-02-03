@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "dynarr/dynarr.h"
+#include "../dynarr/dynarr.h"
 
 int main(void){
   DynArr arr = {0};
