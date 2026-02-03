@@ -12,7 +12,10 @@
 init:
   push rbp         # old base-ptr reservation
   mov  rbp, rsp    # new base-ptr for current procedure
-  # No stack space required; No callee-saved register required
+  push r13
+  push r14
+  push r15
+  sub rsp, 8
 
 # if (arr->ptr != 0)
   mov  rcx, QWORD PTR [rdi + 8*0]    # arr->ptr
@@ -35,16 +38,21 @@ init:
   test rdx, rdx    # Check if result overflowed to rdx
   jnz  .sizemax_overflow     # Jump if rdx is non-zero
 
-  mov  rcx, rdi    # preserve the pointer to DynArr
+# malloc; preserve rdi, rsi and rdx
+  mov r13, rdi
+  mov r14, rsi
+  mov r15, rcx     # Not rdx because it has been used in imul and preserved in rcx
+
   mov  rdi, rax    # Reuse rax as it contains (cap * elem_size) from previous computation
   call malloc@PLT
+
   test rax, rax    # NULL check on the pointer returned by malloc
   jz   .malloc_failed
 
-  mov QWORD PTR [rcx + 8*0], rax     # arr->ptr = rax (malloc's return value)
-  mov QWORD PTR [rcx + 8*1], rsi     # arr->elem_size (rsi)
-  mov QWORD PTR [rcx + 8*2], 0       # arr->count     (initialize with 0)
-  mov QWORD PTR [rcx + 8*3], rcx     # arr->capacity  (rcx)
+  mov QWORD PTR [r13 + 8*0], rax     # arr->ptr = rax (malloc's return value)
+  mov QWORD PTR [r13 + 8*1], r14     # arr->elem_size (rsi)
+  mov QWORD PTR [r13 + 8*2], 0       # arr->count     (initialize with 0)
+  mov QWORD PTR [r13 + 8*3], r15     # arr->capacity  (rcx)
 
   xor rax, rax      # rax=SUCCESS (0)
   jmp .ret_block_p1
@@ -77,12 +85,12 @@ init:
 #   rdi=&arr (pointer to the dynamic array struct)
 #   rsi=add_bytes (extra bytes required, size_t)
 extend:
-  push rbp          # preserve old base pointer
-  mov  rbp, rsp     # setup new base-ptr for current procedure
+  push rbp         # preserve old base pointer
+  mov  rbp, rsp    # setup new base-ptr for current procedure
   push r12
   push r13
 
-  test rdi, rdi       # !arr
+  test rdi, rdi    # !arr
   jz   .init_first_p2
 
   # Even though arr->ptr is required in the two ending regions, it's far, which is why I am not using a callee-saved register.
@@ -95,7 +103,7 @@ extend:
   mov  r10, QWORD PTR [rdi + 8*2]    # arr->count
   add  r10, rsi                      # arr->count+add_bytes (becomes `total`, later)
   cmp  r10, rcx                      # (arr->count+add_bytes <= arr->capacity)
-  jb .success_p2
+  jbe .success_p2
 
 # Now we need space for two variables: (total, cap)
 #   `total` is already computed in r10, and rcx has arr->capacity.
@@ -612,15 +620,16 @@ export2stack:
   jz   .init_first_p10
 
 # memcpy; no need to save anything because nothing exists beyond this memcpy call.
+  # Arg3 (rdx=bytes)
+  mov  rdx, QWORD PTR [rdi + 8*1]    # dynarr->elem_size
+  imul rdx, QWORD PTR [rdi + 8*2]    # dynarr->count
+
   # Arg2 (rsi=dynarr->ptr)
+  mov rcx, rsi
   mov rsi, QWORD PTR [rdi + 8*0]
 
-  # Arg3 (rdx=bytes)
-  mov  rcx, QWORD PTR [rdi + 8*1]    # dynarr->elem_size
-  imul rcx, QWORD PTR [rdi + 8*2]    # dynarr->count
-
   # Arg1 (rdi=*stackarr)
-  mov rdi, rsi
+  mov rdi, rcx
 
   call memcpy@PLT
 
@@ -779,7 +788,7 @@ removeidx:
   jz   .invalid_idx_p12
 
 # memmove(dest, src, bytes)
-  mov r8, QWORD PTR [rdi + 8*1]    # arr->elem_size
+  mov r8, QWORD PTR [r13 + 8*1]      # arr->elem_size
 
   # Arg1 (rdi=dest)
   mov  rcx, r14                      # idx

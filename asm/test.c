@@ -64,12 +64,14 @@ int main(void){
 
   /* Check getelement (and boundcheck, internally) */
   /* All 26 elements printed properly */
+  printf("Running getelement()....\n");
   for (size_t i=0; i<arr.count; i++){
     printf("%d, ", *(int*)(getelement(&arr, i)));
   }
   printf("\n\n\n");
 
   /* Check getelement hoisted version */
+  printf("Running getelement() with the pointer calculated once and hoisted....\n");
   const int* p;
   p = getelement(&arr, 0);
   for (size_t i=0; i<arr.count; i++){
@@ -79,9 +81,9 @@ int main(void){
 
   /* Check setidx */
   const int* idx19 = getelement(&arr, 19);
-  printf("idx19 before: %d\n", *idx19);
   int y = 55;
   printf("Running setidx()....\n");
+  printf("  idx19 before: %d\n", *idx19);
   res = setidx(&arr, (void*)(&y), 19);
   printf("  res: %d\n", res);
   printf("  idx19 after: %d\n", *idx19);
@@ -130,7 +132,7 @@ int main(void){
 
   /* Check removeidx() */
   /* count=26 */
-  printf("Running insertidx()....\n");
+  printf("Running removeidx()....\n");
   printf("  count before: %d\n", arr.count);
   res = removeidx(&arr, 14);
   printf("  res: %d\n", res);

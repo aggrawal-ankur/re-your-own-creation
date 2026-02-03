@@ -171,3 +171,27 @@ Last, `NULL` or `(void*)0` is `0` in x64-asm.
 Woke up relaxed. Started the day incredibly great. Wrote isempty and setidx. Although the implementation itself was easy, I found my way to some confusions which took about an hour. Then I reached bytecopy with 2 more similar functions: merge and export2dyn. This disturbed me enough. I started cleanup and as usual, it didn't end up well. Then **IND vs NZ T20** last match was today, so ~1.5h there. Then I continued refactoring and it got complicated and that's how I've soared the back pain which was very minimal since last night.
 
 I need to write a changelog of all the changes because it is necessary that's time. I am not making things big unnecessarily, I just want to close this thread properly. But I am done for today.
+
+# Day 5
+
+# Day 6
+
+In first attempt, 5 tests run with no correct value.
+
+# Day 7
+
+**February 03, 2026**
+
+**09:50 AM**
+
+I've started testing the assembly. As said, I've already spotted the first problem that I didn't preserved registers before call. Let's change that.
+
+After making the change, 12 tests run, of which `extend` ran incorrectly where it should not extend as the count was zero already, it was meant to be an internal routine but the assembly extended it. The second failure was export2stack, the values aren't right. The last failure is with removeidx, a segfault.
+
+In extend, I'd to change jb to jbe for the test that checks count + add_bytes <= capacity.
+
+In export2stack, I have to make 2 changes. First, I was setting rcx instead of rdx. Second, rsi was required to be rdi+0 and rdi was required to be rsi. This can't be achieved without a third register, which I didn't use. And it works now.
+
+In removeidx, I was loading elem_size from rdi instead of r13.
+
+Now, every check works exactly the same way.
