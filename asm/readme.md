@@ -10,6 +10,8 @@ Now I want to make other hidden things visible. For this, I need to dive deeper 
 
 I don't want to compare with gcc or clang. I just want to understand the hidden invariants and constraints better. LLVM IR helped me see them to some extent, now I want to improve on that.
 
+All thoughts are raw here, except the technical stuff, that is either correct or incorrect.
+
 ## External Functions
 
 dynarr.c uses these functions and I'll call them as is.
@@ -168,27 +170,63 @@ Last, `NULL` or `(void*)0` is `0` in x64-asm.
 
 **10:44 PM**
 
-Woke up relaxed. Started the day incredibly great. Wrote isempty and setidx. Although the implementation itself was easy, I found my way to some confusions which took about an hour. Then I reached bytecopy with 2 more similar functions: merge and export2dyn. This disturbed me enough. I started cleanup and as usual, it didn't end up well. Then **IND vs NZ T20** last match was today, so ~1.5h there. Then I continued refactoring and it got complicated and that's how I've soared the back pain which was very minimal since last night.
+Woke up relaxed. Started the day incredibly great. Wrote `isempty` and `setidx` today. Although the implementation itself was easy, I found my way to some confusions which took about an hour to resolve. Then I reached bytecopy with 2 more similar functions: merge and export2dyn. This disturbed me enough. I started cleanup and as usual, it didn't end up well. Then **IND vs NZ T20** last match was today, so ~1.5h there. Then I continued refactoring and it got complicated and that's how I've soared the back pain which was very minimal last night.
 
-I need to write a changelog of all the changes because it is necessary that's time. I am not making things big unnecessarily, I just want to close this thread properly. But I am done for today.
+I need to write a changelog of all the changes because it is necessary that's time. I am not making things big unnecessarily, I just want to close this thread properly. But I am done for today. The back pain is soaring at one point in my back.
 
-# Day 5
+# Day 5 Takeaways
 
-# Day 6
+**February 01, 2026** (But writing on **February 03, 2026  03:34 PM**)
 
-In first attempt, 5 tests run with no correct value.
+Woke up fresh and relaxed, with less pain in body. Started my day with correcting my mental model of tiny things and writing th changelog.
 
-# Day 7
+Then I made corrections in the assembly to reflect the changes made in the source.
+
+Later from evening on wards, I started working on the remaining procedures. I had one 3 hour setting from 5 PM to 7 PM and it was fantastic. Then I had another one from 9 PM to 10.10 PM. And dynarr.asm is done. At one point, I was writing so fast, as if I am writing C, not assembly.
+
+It is the first time when I felt like I didn't gain momentum, I started with it. From the start of the session, I was so focused, but I know it is not a one day effort. It is my 545th day on this journey. I started long back and now the rewards are coming.
+
+At one point, leaving comments wasn't helping much but making me slow. That's why I've reduced writing comments as well, just to-the-point stuff now.
+
+`QWORD PTR` is something I always tend to forget and quickly realize that I've forget it. Another thing that I get wrong is using wrong registers. I forget rdi has been saved in r13 a lot of times. I am improving on these.
+
+But I do need to check the assembly for missing and wrong stuff, which I'll do later because my back is hurting selectively in that one region from last night.
+
+# Day 6 Takeaways
+
+**February 02, 2025** (But writing on **February 03, 2026  03:52 PM**)
+
+Woke up fresh and relaxed. I started with correcting the assembly I've written yesterday. As usual, some wrong assumptions, some invalid register usage, inserting `QWORD PTR`, folding instructions, and comments.
+
+Since the C source underwent a lot of changes I've to test it first. With 2-3 minor changes, everything got working. I also have to change the assembly to reflect them. I've also made export2stack receive single ptr instead of double (*stackarr). Apart from this, I've cleaned the assembly as well.
+
+I've used the same tests on my handwritten assembly. When I went on building the binary, like this:
+```bash
+gcc -g -c test.c -o test.o 
+as asm/dynarr.asm -o dynarr.o
+```
+I got multiple errors while assembling dynarr.asm into a relocatable object because I was reusing labels, which is wrong. So I appended `_p$` in the end of every non-unique label which means "belongs to procedure $". That was the easiest option. Along with this, the assembly had one `jz` missing, one unnecessary `QWORD PTR` which I forgot to remove when I changed **stackarr to *stackarr and one wrong register usage where I compared rdx with lb instead of rdi.
+
+After these changes, the assembly assembled and then I linked both of them.
+```bash
+gcc test.o dynarr.o -o test
+```
+
+In first attempt, 5 tests run with no correct value and then segfault. I opened the assembly and realized that I'm clobbered registers. I didn't change this part of assembly when I learned that when the procedure become a caller it has to preserve the arguments. Although the direction was straightforward, I knew that this is not the only problem and I was already out of time for today.
+
+It was a tough call, but I chose shutdown so that I can wake up on time tomorrow.
+
+# Day 7 Takeaways
 
 **February 03, 2026**
 
 **09:50 AM**
 
-I've started testing the assembly. As said, I've already spotted the first problem that I didn't preserved registers before call. Let's change that.
+I've started testing and correcting the assembly. As said, I've already spotted the first problem that I didn't preserved registers before call. Let's change that.
 
 After making the change, 12 tests run, of which `extend` ran incorrectly where it should not extend as the count was zero already, it was meant to be an internal routine but the assembly extended it. The second failure was export2stack, the values aren't right. The last failure is with removeidx, a segfault.
 
-In extend, I'd to change jb to jbe for the test that checks count + add_bytes <= capacity.
+In extend, I'd to change jb to jbe for the `test` that checks count + add_bytes <= capacity.
 
 In export2stack, I have to make 2 changes. First, I was setting rcx instead of rdx. Second, rsi was required to be rdi+0 and rdi was required to be rsi. This can't be achieved without a third register, which I didn't use. And it works now.
 
