@@ -19,3 +19,61 @@ Next I'll feed my analysis and gcc's output to ChatGPT, because ChatGPT has know
 If I were to optimize GCC's -O0 output, that'd have felt boring and non-living. I've already removed that by writing a baseline assembly myself. Now it will feel extremely personal and related, something I need when I want to make real progress.
 
 I don't know how I will manage the findings, so I am letting findings come first. Later, the solutions will emerge too.
+
+## GCC Output
+
+```bash
+gcc dynarr/dynarr.c -S -masm=intel -O1 -fno-asynchronous-unwind-tables -fno-dwarf2-cfi-asm -masm=intel
+```
+
+Line stats: 483
+
+# First Impressions
+
+I've 2 immediate findings.
+  1. Base pointer omission
+  2. Different offset calculation method
+
+Base pointer omission is something I'm aware of.
+
+## Offset calculation
+
+Since the layout of the dynamic array is simple and consistent, there is no need for calculations like: `[rdi + 8*1]`. GCC is using:
+```nasm
+mov	QWORD PTR [r12], rax
+mov	QWORD PTR 8[r12], rbx
+mov	QWORD PTR 24[r12], rbp
+mov	QWORD PTR 16[r12], 0
+```
+.... throughout the assembly.
+
+I have used stuff like: `[rdi + 8*1]`, which is better to comprehend the layout when you are a newbie. When I was starting, I've to think like: "0-7 for ptr, 8-15 for elem_size, so [rdi + 8*1] is the right one".
+
+When I look at GCC's version, I can immediate notice that it is better. `8[rdi]` is basically elem_size. It aligns with how I started myself to reason offset calculation in organized memory layouts. `QWORD PTR 8[rdi]` means "load 8 bytes starting from 8th byte from the base represented by rdi".
+
+That's the first thing I am going to change.
+
+### After math
+
+I've made the changes and running the tests again showed that pushOne had a segfault, which means memcpy failed. init and extend worked as expected.
+
+This line was wrong:
+```nasm
+mov  rdi, QWORD PTR  8[r14]    # arr->ptr
+
+# Correct one
+mov  rdi, QWORD PTR   [r14]    # arr->ptr
+```
+
+That means, I wrongly updated one pattern for address calculation.
+
+pushOne works now and pushMany is fine. getelement is the next wrong piece, a segfault. I presume the same problem, and it is.
+```
+mov  rax, QWORD PTR 8[r14]    # arr->ptr
+
+# Correct one
+mov  rdi, QWORD PTR   [r14]    # arr->ptr
+```
+```
+
+getelement is working, setidx is working, the next segfault is at mergedyn2dyn. It should be at memcpy and I presume the same issue, and it is. All tests passed.
