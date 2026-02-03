@@ -233,3 +233,7 @@ In export2stack, I have to make 2 changes. First, I was setting rcx instead of r
 In removeidx, I was loading elem_size from rdi instead of r13.
 
 Now, every check works exactly the same way.
+
+# What's Next?
+
+The next thing I want to do is to optimize this assembly. I'll read gcc's output at -O1 and -O2, understand what it did better and implement them in my handwritten x64-asm.
