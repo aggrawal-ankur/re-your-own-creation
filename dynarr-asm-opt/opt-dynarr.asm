@@ -13,7 +13,7 @@ init:
   push r13
   push r14
   push r15
-  sub  rsp, 8
+  # Since rbp is not used, only 3 registers are required to be pushed
 
 # if (arr->ptr != 0)
   mov  rcx, QWORD PTR [rdi]    # arr->ptr
@@ -71,7 +71,6 @@ init:
   jmp .ret_block_p1
 
 .ret_block_p1:
-  add rsp, 8
   pop r15
   pop r14
   pop r13
@@ -87,6 +86,7 @@ init:
 extend:
   push r12
   push r13
+  sub  rsp, 8
 
   test rdi, rdi    # !arr
   jz   .init_first_p2
@@ -151,6 +151,7 @@ extend:
 
 .ret_block_p2:
   # Release memory in opposite order
+  add rsp, 8
   pop r13
   pop r12
   ret
@@ -165,6 +166,7 @@ extend:
 pushOne:
   push r14
   push r15
+  sub  rsp, 8
 
   test rdi, rdi      # !arr
   jz .init_first_p3
@@ -229,6 +231,7 @@ pushOne:
   jmp .ret_block_p3
 
 .ret_block_p3:
+  add rsp, 8
   pop r15
   pop r14
   ret
@@ -245,7 +248,6 @@ pushMany:
   push r13
   push r14
   push r15
-  sub  rsp, 8      # Dummy push to realign the stack at a 16 divisible boundary
 
   test rdi, rdi    # !arr
   jz   .init_first_p4
@@ -312,7 +314,6 @@ pushMany:
 
 .ret_block_p4:
 # Release memory in opposite order of reservation
-  add rsp, 8
   pop r15
   pop r14
   pop r13
@@ -352,6 +353,7 @@ boundcheck:
 getelement:
   push r14
   push r15
+  sub rsp, 8
 
   test rdi, rdi    # !arr
   jz   .null_ret
@@ -389,6 +391,7 @@ getelement:
   xor rax, rax    # NULL
 
 .ret_block_p6:
+  add rsp, 8
   pop r15
   pop r14
   ret
@@ -425,7 +428,6 @@ setidx:
   push r13
   push r14
   push r15
-  sub  rsp, 8      # Dummy memory for rsp alignment
 
   test rdi, rdi    # !arr
   jz   .init_first_p8
@@ -487,7 +489,6 @@ setidx:
   jmp .ret_block_p8
 
 .ret_block_p8:
-  add rsp, 8
   pop r15
   pop r14
   pop r13
@@ -503,6 +504,7 @@ setidx:
 mergedyn2dyn:
   push r14
   push r15
+  sub  rsp, 8
 
   test rdi, rdi    # !src
   jz   .init_first_p9
@@ -569,6 +571,7 @@ mergedyn2dyn:
   mov eax, -9
 
 .ret_block_p9:
+  add rsp, 8
   pop r15
   pop r14
   ret
@@ -623,7 +626,6 @@ insertidx:
   push r13
   push r14
   push r15
-  sub  rsp, 8
 
   test rdi, rdi    # !arr
   jz   .init_first_p11
@@ -709,7 +711,6 @@ insertidx:
   jmp .ret_block_p11
 
 .ret_block_p11:
-  add rsp, 8
   pop r15
   pop r14
   pop r13
@@ -725,6 +726,7 @@ insertidx:
 removeidx:
   push r13
   push r14
+  sub rsp, 8
 
   test rdi, rdi
   jz   .init_first_p12
@@ -787,6 +789,7 @@ removeidx:
   jmp .ret_block_p12
 
 .ret_block_p12:
+  add rsp, 8
   pop r14
   pop r13
   ret
@@ -826,7 +829,6 @@ clearArr:
 #   rdi=&arr
 freeArr:
   push rbx
-  sub  rsp, 8
 
   test rdi, rdi
   jz   .init_first_p14
@@ -850,7 +852,6 @@ freeArr:
   mov eax, -5
 
 .ret_block_p14:
-  add rsp, 8
   pop rbx
   ret
 
