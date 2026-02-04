@@ -100,3 +100,31 @@ Done with the day.
 # Day 2
 
 ***February 04, 2026***
+
+Started my day with correcting an issue from yesterday. As I removed rbp, that misaligns rsp and I have to ensure the calculation still holds. It didn't hold at most of the places yet it worked. That's UB.
+
+The first optimization trick for today is **Partial Redundancy Elimination (PRE)**. Although I think it only touches PRE and is not heavy PRE in any sense.
+
+***We make failure the default return and hoist that branch early, which can be overwritten when SUCCESS happens.*** The notes can be found at [compiler-optimizations/fpo.md](https://github.com/aggrawal-ankur/knowledge-base/blob/main/compiler-optimizations/pre/pre.md)
+
+This feels like branch reduction, then PRE.
+
+But GCC does it very selectively where it sees profit. Let's start with `init`. It has 4 branches (.init_first, .invalid_sizes, .sizemax_overflow, .malloc_failed).
+  - .init_first is hoisted.
+  - .invalid_sizes isn't hoisted.
+  - .sizemax_overflow is hoisted.
+  - .malloc_failed isn't hoisted.
+
+Why something is hoisted doesn't matter much when we ask **why something is not hoisted!**
+  - Why .malloc_failed is not hoisted? Maybe the compiler reasoned that malloc will clobber `rax`. Makes sense.
+  - Why .invalid_sizes isn't hoisted? I've no answer to it yet.
+
+If we notice a little more, we'll find that gcc is using `ecx` for saving the return code and moving it into `eax` while returning. `eax` is never used directly, not even a single time. This raises an even bigger question, when the compiler was clever enough to find that the return code can be stored in ecx and moved to eax, why .invalid_sizes is not hoisted?
+
+A question of profitability makes sense here. *What makes hoisting something profitable while something else expensive?* This is also when you are hoisting somewhere else and then copying into eax *which effectively does what kind of optimization is something amusing right now, at least until the reasoning isn't clear.*
+
+---
+
+Although I am done for today, with pretty unclear thoughts, and a tired mind and body, my learning for today is that ***in compiler generated assembly, everything exists for a reason, logical or economical***. Earlier I thought it is only logical, but now I understand it can be economical as well.
+
+I don't remember when I felt tired both mentally and physically the last time. It was definitely before analyzing the IRs and writing dynarr.asm, in early to mid January 2026. Today I feel tired after a long time.
