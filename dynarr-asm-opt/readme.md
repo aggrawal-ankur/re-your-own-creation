@@ -131,6 +131,8 @@ I don't remember when I felt tired both mentally and physically the last time. I
 
 # Day 3
 
+***February 05, 2026***
+
 ## Hoisting led Branch Reduction (continued)
 
 Good morning. I woke up fresh and relaxed. Before even getting out of bed, I had the first insight of the day. ***Is clever register usage worth an optimization trick? Is giving high attention to how the intent can be expressed is worth of an optimization technique?***
@@ -219,3 +221,14 @@ I've inlined boundcheck at 4 places and all tests passed.
 
 742 lines -> 694 lines (48 lines)
 
+## A weird experience
+
+I've noticed r10 being used unnecessarily as rsi can be reused as add_bytes+count in extend. So I made changes to the code and run the tests. It passed all the tests, but this felt weird because nothing broke the code. I thought I made the changes correctly, so I let's mess with this code, it should break then, right? It didn't.
+
+I tried to look at it and while it looks fine, I've a weird feeling that it isn't. Well, if there is a problem, let it sink and reveal it later when I'll hunt for bugs or introduce them in the code myself.
+
+# Conclusion
+
+I don't know if there is anything else to explore because the source itself is quite simple. It checks a few things and does some pointer arithmetic. All the heavylifting is done memcpy and memmove. The whole source has only one loop, only one.
+
+I think dynarr.asm did what it was supposed to do, and now it's time to write dynstr.asm.

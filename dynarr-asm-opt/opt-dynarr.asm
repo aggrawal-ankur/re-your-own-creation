@@ -79,26 +79,23 @@ extend:
   push r13
   sub  rsp, 8
 
-  mov eax, -5
+  mov  eax, -5
   test rdi, rdi    # !arr
   jz   .ret_block_p2
 
-  # Even though arr->ptr is required in the two ending regions, it's far, which is why I am not using a callee-saved register.
   mov  rcx, QWORD PTR [rdi]    # arr->ptr
   test rcx, rcx                # !arr->ptr
   jz   .ret_block_p2
 
-  # Repurposing rcx for arr->capacity
-  mov rcx, QWORD PTR 24[rdi]    # arr->capacity
-  mov r10, QWORD PTR 16[rdi]    # arr->count
-  add r10, rsi                  # arr->count+add_bytes (becomes `total`, later)
+  mov rcx, QWORD PTR 24[rdi]    # arr->capacity  (cap)
+  add rsi, QWORD PTR 16[rdi]    # arr->count+add_bytes (i.e `total`, later)
+
   xor eax, eax  # return hoisted
-  cmp r10, rcx                  # (arr->count+add_bytes <= arr->capacity)
+  cmp rsi, rcx                  # (arr->count+add_bytes <= arr->capacity)
   jbe .ret_block_p2
 
 # Now we need space for two variables: (total, cap)
-#   `total` is already computed in r10, and rcx has arr->capacity.
-#   No new register required.
+#   `total` is already computed in rsi, and cap in rcx (arr->capacity).
 #   rcx undergoes changes (cap *= 2) and the original arr->capacity is accessible at 24[rdi]; Memory here is more authoritative.
 
 # while (cap < total) cap *= 2
@@ -106,12 +103,12 @@ extend:
   # We are doing updation first because the condition is checked for the first time outside the loop already.
   # This is basically while loop changed to a do-while loop: `do { cap *= 2 } while ( cap < total);`
   shl rcx, 1    # cap *= 2
-  cmp rcx, r10
+  cmp rcx, rsi
   jb .inc_cap
 
-# To call realloc, we've to override rdi and rsi, which have the params passed to the `extend` procedure.
-# We need to preserve them to callee-saved registers. add_bytes is not used in anymore, so we only need to preserve rdi.
-# Another thing we need to save is rcx which has the updated capacity, because rcx is a caller-saved register and extend becomes a caller as soon as it calls realloc.
+# realloc; preserve rdi and rsi
+#   add_bytes is not used in anymore, so we only need to preserve rdi.
+#   We've to save rcx which has the new capacity, as rcx is a caller-saved register and extend becomes a caller as soon as it calls realloc.
 .realloc:
   mov r13, rdi    # r13 = &arr
   mov r12, rcx    # r12 = new cap
