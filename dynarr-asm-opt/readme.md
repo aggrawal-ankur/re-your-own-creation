@@ -109,7 +109,7 @@ The first optimization trick for today is **Partial Redundancy Elimination (PRE)
 
 This feels like branch reduction, then PRE.
 
-But GCC does it very selectively where it sees profit. Let's start with `init`. It has 4 branches (.init_first, .invalid_sizes, .sizemax_overflow, .malloc_failed).
+But GCC does it very selectively **where it sees profitability**. Let's start with `init`. It has 4 branches (.init_first, .invalid_sizes, .sizemax_overflow, .malloc_failed).
   - .init_first is hoisted.
   - .invalid_sizes isn't hoisted.
   - .sizemax_overflow is hoisted.
@@ -128,3 +128,94 @@ A question of profitability makes sense here. *What makes hoisting something pro
 Although I am done for today, with pretty unclear thoughts, and a tired mind and body, my learning for today is that ***in compiler generated assembly, everything exists for a reason, logical or economical***. Earlier I thought it is only logical, but now I understand it can be economical as well.
 
 I don't remember when I felt tired both mentally and physically the last time. It was definitely before analyzing the IRs and writing dynarr.asm, in early to mid January 2026. Today I feel tired after a long time.
+
+# Day 3
+
+## Hoisting led Branch Reduction (continued)
+
+Good morning. I woke up fresh and relaxed. Before even getting out of bed, I had the first insight of the day. ***Is clever register usage worth an optimization trick? Is giving high attention to how the intent can be expressed is worth of an optimization technique?***
+
+I opened VS Code a few moments ago and the first thing I saw is "I am pushing `r13, r14, r15` early but when it comes to preserving rdx (which contains cap), I am using rcx, instead of r15, which is the right place for preserving rdx. Later I am moving rcx into r15.
+```asm
+# if (cap > SIZE_MAX/elem_size) return SIZEMAX_OVERFLOW;
+  mov  rcx, rdx    # preserve rdx (cap) as mul will clobber rdx
+  mov  rax, rdx    # rax = cap
+  mul  rsi         # (rax * rsi) == (cap * elem_size)  Result => rdx:rax {rdx:64-127 bits, rax:0-63 bits}
+  test rdx, rdx    # Check if result overflowed to rdx
+  jnz  .sizemax_overflow     # Jump if rdx is non-zero
+
+# malloc; preserve rdi, rsi and rdx
+  mov r13, rdi
+  mov r14, rsi
+  mov r15, rcx     # Not rdx because it has been used in imul and preserved in rcx
+```
+
+This can be simplified to:
+```asm
+# if (cap > SIZE_MAX/elem_size) return SIZEMAX_OVERFLOW;
+  mov  r15, rdx    # preserve rdx (cap) in r15 as mul will clobber rdx to store 64-127 bits of the result (overflow)
+  mov  rax, rdx    # rax = cap
+  mul  rsi         # (rax * rsi) == (cap * elem_size)  Result => rdx:rax {rdx:64-127 bits, rax:0-63 bits}
+  test rdx, rdx    # Check if result overflowed to rdx
+  jnz  .sizemax_overflow    # Jump if rdx is non-zero
+
+# malloc; preserve rdi and rsi
+  mov r13, rdi
+  mov r14, rsi
+```
+
+In init(), I've hoisted .init_first(-1) and .invalid_sizes(-2) because they can be hoisted and I left -3 and -4 because they can't be unless I use a third register, like gcc at -O1, which doesn't make sense to me.
+
+---
+
+Before we hoist return values in other procedures, I want to note that gcc at -O1 does it very selectively. Like extend has only SUCCESS being hoisted. Plus, gcc is optimizing for how many instructions actually execute at runtime, instead of total number of instructions in the procedure.
+
+It is very much possible that my act of hoisting return values only make the code unoptimized. One thing I recently thought is that avoiding error is something I try to do my best. And we do try to optimize the code for success paths. Right now, I am hoisting return codes for error paths, why don't I do this for success paths instead? Like in extend, I didn't hoist `(arr->count+add_bytes <= arr->capacity)` when this is a likely path in normal conditions, while error paths are unlikely by default unless you manipulate them.
+
+So, I can take an approach where I can hoist return paths which are accessed frequently and eax is not used in between. This way, I hoist one value and enjoy it on more than one conditional jump. Second, I can hoist success paths if there are multiple of them, like extend has. Although I am sure this is not the case with most of the functions, but I had the idea so I shared it.
+
+This framework is better than hoisting values in wild.
+
+---
+
+I've hoisted what I thought is worth hoisting and the number of lines have reduced to 805 from 858 (53 lines). I've added a bunch of new comments to account for this change at some places and modified register usage in init where I am using r15 directly instead of rcx to preserve rdx.
+
+As I read gcc at -O1, seeing patterns that look weird and don't make complete sense, I've realized that ***not very choice is logical, some choices are economical. There is always a possibility to reverse the logical reasoning the compiler used, but reversing economical reasoning is something not possible until I understand the compiler's cost model.***
+
+## Restructuring and removing redundant comments
+
+This one is for myself. Whenever I do anything, resetting comments always slide in. So I did it once for all, so that I can reduce it to bare minimum.
+
+805 lines -> 742 lines (63 lines)
+
+## Inline and setidx boundcheck
+
+Inlining boundcheck is a very simple because the computation it involves is very simple.
+
+This is boundcheck:
+```c
+int boundcheck(size_t lb, size_t ub, size_t idx){ return (idx >= lb && idx < ub); }
+```
+
+boundcheck expects idx as a size_t value, that means, idx belongs to `[0, 2^64 - 1)`, so we don't have to check for (idx <= lb). We only have to check for (idx < ub). That's it.
+
+Take getelement, for example:
+```asm
+mov rdx, rsi                  # Arg3 (rdx=idx)
+mov rsi, QWORD PTR 16[rdi]    # Arg2 (rsi=arr->count)
+xor rdi, rdi                  # Arg1 (rdi=0)
+call boundcheck
+test eax, eax
+jz   .null_ret    # NULL
+```
+This assembly can be replaced with:
+```asm
+cmp rsi, 16[rdi]    # idx < ub
+jae .ret_block_p6
+```
+Plus, we don't have to preserve rdi and rsi anymore.
+
+I've inlined boundcheck at 4 places and all tests passed.
+
+742 lines -> 694 lines (48 lines)
+

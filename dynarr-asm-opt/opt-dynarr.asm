@@ -38,9 +38,7 @@ init:
   mov r13, rdi
   mov r14, rsi
 
-  # Arg1 malloc (rdi=cap*elem_size=rax)
-  mov  rdi, rax
-
+  mov  rdi, rax    # Arg1 (rdi=cap*elem_size=rax)
   call malloc@PLT
   test rax, rax    # NULL check on the pointer returned by malloc
   jz   .malloc_failed
@@ -94,7 +92,7 @@ extend:
   mov rcx, QWORD PTR 24[rdi]    # arr->capacity
   mov r10, QWORD PTR 16[rdi]    # arr->count
   add r10, rsi                  # arr->count+add_bytes (becomes `total`, later)
-  xor eax, eax    # return hoisted
+  xor eax, eax  # return hoisted
   cmp r10, rcx                  # (arr->count+add_bytes <= arr->capacity)
   jbe .ret_block_p2
 
@@ -118,13 +116,9 @@ extend:
   mov r13, rdi    # r13 = &arr
   mov r12, rcx    # r12 = new cap
 
-  # Arg2 (rsi=cap*elem_size)
-  mov  rsi, QWORD PTR 8[rdi]    # rsi = arr->elem_size
-  imul rsi, rcx                 # rsi = arr->elem_size*cap
-
-  # Arg1 (rdi=arr->ptr)
-  mov rdi, QWORD PTR [rdi]
-
+  mov  rsi, QWORD PTR 8[rdi]
+  imul rsi, rcx                # Arg2 (rsi=elem_size*cap)
+  mov  rdi, QWORD PTR [rdi]    # Arg1 (rdi=arr->ptr)
   call realloc@PLT
   test rax, rax
   jz   .realloc_failed
@@ -173,18 +167,15 @@ pushOne:
 # Note: Earlier there was an if block which decided whether extend should be called. I've removed it because the same check happens inside extend. It doesn't make sense.
 
 # extend takes 2 argument (&arr, add_bytes)
-#   Since we are only pushing one element add_bytes (rsi) would be 1.
-#   Although rdi is already set for pushOne, we still need to preserve it as it is a caller-saved register and pushOne will become a caller as-soon-as it calls extend.
-#   rsi needs preservation too.
-  mov  r14, rdi    # preserve rdi (&arr)
-  mov  r15, rsi    # preserve rsi (&value_to_push)
+#   rsi=1, rdi is already set.
+#   Preserve rdi and rsi
+  mov r14, rdi    # preserve rdi (&arr)
+  mov r15, rsi    # preserve rsi (&value_to_push)
 
-  # Arg2 (rsi=1)
-  mov  rsi, 1
-
-  call extend      # extend(arr, 1)
+  mov  rsi, 1    # Arg2 (rsi=1)
+  call extend    # extend(arr, 1)
   test eax, eax
-  jnz  .ret_block_p3  # No need to set rax as it is already set with appropriate return value
+  jnz  .ret_block_p3    # No need to set rax as it is already set with appropriate return value
 
 # Now comes memcpy, which takes 3 args (dest, src, bytes)
 #   rsi=r15=&value (src)
@@ -192,12 +183,8 @@ pushOne:
 #   rdi=dest needs computation.
 #   To compute dest, we need: arr->ptr, arr->count and arr->elem_size
 #   We've nothing active, so we have to load everything fresh from memory.
-
-  # Arg3 (rsi=arr->elem_size)
-  mov rdx, QWORD PTR 8[r14]    # arr->elem_size
-
-  # Arg2 (rsi=&value)
-  mov rsi, r15                 # (ptr to value)
+  mov rdx, QWORD PTR 8[r14]    # Arg3 (rdx=arr->elem_size)
+  mov rsi, r15                 # Arg2 (rsi=&value)
 
   # Arg1 (rdi=&dest)
   mov  rcx, QWORD PTR 16[r14]    # arr->count
@@ -206,12 +193,8 @@ pushOne:
   add  rdi, rcx                  # rdi=(arr->ptr + (arr->count * arr->elem_size))
 
   call memcpy@PLT
-
-  # Update arr->count (++)
-  add QWORD PTR 16[r14], 1
-
-  xor eax, eax      # SUCCESS
-  jmp .ret_block_p3
+  add QWORD PTR 16[r14], 1    # arr->count++
+  xor eax, eax    # SUCCESS
 
 .ret_block_p3:
   add rsp, 8
@@ -225,7 +208,7 @@ pushOne:
 
 # Function Parameters:
 #   rdi=&arr (ptr to the dynarr struct)
-#   rsi=&elements (ptr to the memory where the elements to be pushed reside, type:void)
+#   rsi=&elements (ptr to the memory where the elements have to be pushed, type:void)
 #   rdx=count (number of elements, size_t)
 pushMany:
   push r13
@@ -252,13 +235,10 @@ pushMany:
   mov r14, rsi    # &elements
   mov r15, rdx    # count
 
-  # Arg1 (rdi) already set.
-  # Arg2 (rsi=rdx)
-  mov rsi, rdx    # count
-
+  mov rsi, rdx    # Arg2 (rsi=rdx=count)
   call extend
   test eax, eax         # res != SUCCESS
-  jnz  .ret_block_p4    # No need to set eax, the call itself sets it
+  jnz  .ret_block_p4    # No need to set eax
 
 # memcpy(dest, src, bytes)
 #   It takes 3 args and none of them are loaded yet.
@@ -268,9 +248,6 @@ pushMany:
   # Arg3 (init only)
   mov rdx, QWORD PTR 8[r13]    # arr->elem_size
 
-  # Arg2 (rsi=&elements)
-  mov rsi, r14
-
   # Compute and Set arg1 (dest)
   mov  rcx, QWORD PTR 16[r13]    # arr->count
   imul rcx, rdx                  # arr->count * arr->elem_size
@@ -279,14 +256,11 @@ pushMany:
 
   # Finalize arg3 (rdx=arr->elem_size*count)
   imul rdx, r15
+
+  mov rsi, r14    # Arg2 (rsi=&elements)
   call memcpy@PLT
-
-  mov rcx, QWORD PTR 16[r13]    # rcx=arr->count (reload, as rcx is a caller-saved register which can be (will be) clobbered after a call within the procedure)
-  add rcx, r15                  # rcx += count
-  mov QWORD PTR 16[r13], rcx    # update
-
+  add QWORD PTR 16[r13], r15    # arr->count += count
   xor eax, eax    # SUCCESS
-  jmp .ret_block_p4
 
 .ret_block_p4:
 # Release memory in opposite order of reservation
@@ -307,10 +281,10 @@ boundcheck:
   xor eax, eax    # hoist return
 
   cmp rdx, rdi
-  jb .ret_block_p5       # idx < lb   (jb is for unsigned and jl is for signed)
+  jb .ret_block_p5    # idx < lb   (jb is for unsigned and jl is for signed)
 
   cmp rdx, rsi
-  jae .ret_block_p5      # idx > ub   (jae is for unsigned and jge is for signed)
+  jae .ret_block_p5   # idx > ub   (jae is for unsigned and jge is for signed)
 
   mov eax, 1
 
@@ -325,50 +299,27 @@ boundcheck:
 #   rdi=&arr (ptr to the dynarr struct)
 #   rsi=idx  (idx, size_t)
 getelement:
-  push r14
-  push r15
   sub rsp, 8
+  xor eax, eax
 
   test rdi, rdi    # !arr
-  jz   .null_ret
+  jz   .ret_block_p6
 
-  # Although the procedure is small and arr->ptr is active in the 3rd (last) region, saving in callee-saved register and loading from memory seem almost the same.
-  mov  rcx, QWORD PTR [rdi]    #  arr->ptr
-  test rcx, rcx                # !arr->ptr
-  jz   .null_ret
+  mov  rax, QWORD PTR [rdi]    #  arr->ptr
+  test rax, rax                # !arr->ptr
+  jz   .ret_block_p6
 
-# boundcheck; Preserve rdi and rsi before
-  mov r14, rdi
-  mov r15, rsi
-
-  # Arg3 (rdx=idx)
-  mov rdx, rsi
-
-  # Arg2 (rsi=arr->count)
-  mov rsi, QWORD PTR 16[rdi]
-
-  # Arg1 (rdi=0)
-  xor rdi, rdi      # not rdi because numbers are int by default, unless stated otherwise (integer literal suffixes), but we need rdi because boundcheck expects lb is a size_t value
-
-  call boundcheck
-  test eax, eax
-  jz   .null_ret    # NULL
+  # boundcheck inlined;
+  cmp rsi, 16[rdi]     # idx < ub
+  jae .ret_block_p6
 
   # Calculate the ptr_to_idx
-  mov  rcx, QWORD PTR 8[r14]    # arr->elem_size
-  imul rcx, r15                 # rcx = arr->elem_size * idx
-  mov  rax, QWORD PTR  [r14]    # arr->ptr
-  add  rax, rcx
+  imul rsi, QWORD PTR 8[rdi]    # rsi=idx*elem_size
+  add  rax, rsi
   jmp  .ret_block_p6
-
-# This can't be hoisted as the result is literally sent in eax
-.null_ret:
-  xor rax, rax    # NULL
 
 .ret_block_p6:
   add rsp, 8
-  pop r15
-  pop r14
   ret
 
 
@@ -383,7 +334,7 @@ isempty:
   test rcx, rcx                  # !arr->count
   jz   .ret_block_p7
 
-  xor  eax, eax       # 0 for allocated
+  xor eax, eax    # 0 for allocated
 
 .ret_block_p7:
   ret
@@ -393,72 +344,47 @@ isempty:
 .type setidx, @function
 
 # Function Parameters:
-#   rdi= &arr
-#   rsi= &value_to_set
-#   rdx= idx
+#   rdi=&arr
+#   rsi=&value_to_set
+#   rdx=idx
 setidx:
-  push r13
-  push r14
-  push r15
+  sub rsp, 8
 
   mov eax, -5
   test rdi, rdi    # !arr
   jz   .ret_block_p8
 
-  mov  rcx, QWORD PTR [rdi]      # arr->ptr
-  test rcx, rcx                  # !arr->ptr
+  mov  rcx, QWORD PTR [rdi]
+  test rcx, rcx                # !arr->ptr
   jz   .ret_block_p8
 
-  test rsi, rsi                  # !value
+  test rsi, rsi                # !value
   jz   .invalid_pushreq_p8
 
-# boundcheck; preserve rdi, rsi, rdx
-  mov r13, rdi
-  mov r14, rsi
-  mov r15, rdx
-# I prefer numbered registers (r12 - r15) because of less mental overhead compared to alphabetical ones.
-
-  # Arg3 (rdx=idx) already set.
-  # Arg2 (rsi=arr->count)
-  mov rsi, QWORD PTR 16[rdi]
-
-  # Arg1 (rdi=0)
-  xor rdi, rdi    # Although normal digits are considered ints unless stated otherwise, we can't use edi here because boundcheck expects a size_t value. Although it doesn't affect because 0 on zext or sext remains 0. But it is wrong principle-wise. If the callee expects size_t, pass size_t only. Because if -1 was passed, we know we are done because zero extension is implicit and we are gonna have 4.29b+ instead of -1. And I need to follow the principles.
-
-  call boundcheck
-  test eax, eax
-  jz   .invalid_idx_p8
+# boundcheck inlined;
+  cmp rdx, 16[rdi]     # idx < ub
+  jae .ret_block_p8
 
 # memcpy
-  # Arg3 (rdx=arr->elem_size)
-  mov rdx, QWORD PTR 8[r13]    # arr->elem_size
-
-  # Arg2 (rsi=&value)
-  mov rsi, r14
+  # Arg2 (rsi=&value) already set
+  mov rcx, rdx       # preserve idx
+  mov rdx, 8[rdi]    # Arg3 (rdx=elem_size)
 
   # Arg1 (rdi=dest)
-  imul r15, rdx                # r15=idx*arr->elem_size
-  mov  rdi, QWORD PTR [r13]    # arr->ptr
-  add  rdi, r15                # rdi += r15
+  imul rcx, rdx      # idx*elem_size
+  mov  rdi, [rdi]    # base
+  add  rdi, rcx      # base + offset
 
   call memcpy@PLT
   xor  eax, eax    # SUCCESS
   jmp .ret_block_p8
 
-# I can't tell the reason yet, but I am not hoisting it.
+# I don't know the reason yet, but I am not hoisting it.
 .invalid_pushreq_p8:
   mov eax, -7
-  jmp .ret_block_p8
-
-# This can't hoisted as eax has the return value from boundcheck
-.invalid_idx_p8:
-  mov eax, -8
-  jmp .ret_block_p8
 
 .ret_block_p8:
-  pop r15
-  pop r14
-  pop r13
+  add rsp, 8
   ret
 
 
@@ -488,7 +414,7 @@ mergedyn2dyn:
   test rcx, rcx    # !dest->ptr
   jz   .ret_block_p9
 
-  # Even though these values are active in the 3rd region, I'd prefer loading from memory
+  # Even though these values are active in the 3rd region, I'd prefer loading from memory.
   mov rcx, QWORD PTR 8[rdi]    # src->elem_size
   mov r8,  QWORD PTR 8[rsi]    # dest->elem_size
   cmp rcx, r8
@@ -498,19 +424,14 @@ mergedyn2dyn:
   mov r14, rdi
   mov r15, rsi
 
-  # Arg1 (rdi=dest=rsi)
-  mov rdi, rsi
-
-  # Arg2 (rsi=src->count)
-  mov rsi, QWORD PTR 16[r14]
-
+  mov rdi, rsi                  # Arg1 (rdi=dest=rsi)
+  mov rsi, QWORD PTR 16[r14]    # Arg2 (rsi=src->count)
   call extend
   test eax, eax
   jnz  .ret_block_p9    # (ret: NULL)
 
 # memcpy: 3 args (dptr, src->ptr, bytes): all fresh loads
-  # Arg2 (rsi=src->ptr)
-  mov rsi, QWORD PTR [r14]
+  mov rsi, QWORD PTR [r14]    # Arg2 (rsi=src->ptr)
 
   # Arg3 (rdx=src->count * src->elem_size)
   mov  rdx, QWORD PTR 16[r14]    # src->count
@@ -561,13 +482,9 @@ export2stack:
   mov  rdx, QWORD PTR  8[rdi]    # dynarr->elem_size
   imul rdx, QWORD PTR 16[rdi]    # dynarr->count
 
-  # Arg2 (rsi=dynarr->ptr)
-  mov rcx, rsi                   # Preserve rsi as rdi needs it
-  mov rsi, QWORD PTR [rdi]
-
-  # Arg1 (rdi=*stackarr)
-  mov rdi, rcx
-
+  mov rcx, rsi                # Preserve rsi as rdi needs it
+  mov rsi, QWORD PTR [rdi]    # Arg2 (rsi=dynarr->ptr)
+  mov rdi, rcx                # Arg1 (rdi=*stackarr)
   call memcpy@PLT
   xor eax, eax
 
@@ -598,32 +515,23 @@ insertidx:
   test rsi, rsi                # !value
   jz   .invalid_pushreq_p11
 
-# boundcheck; preserve rdi, rsi and rdx
+# boundcheck inlined;
+  cmp rdx, 16[rdi]    # idx < ub
+  jae .ret_block_p11
+
+# extend; preserve rdi, rsi and rdx
   mov r13, rdi
   mov r14, rsi
   mov r15, rdx
 
-  # Arg3 (rdx=idx) already set
-  # Arg2 (rsi=arr->count)
-  mov rsi, QWORD PTR 16[rdi]
-
-  # Arg1 (rdi=0)
-  xor rdi, rdi
-
-  call boundcheck
-  test eax, eax
-  jz   .invalid_idx_p11
-
-# extend
-  mov rdi, r13    # Arg1
-  mov rsi, 1      # Arg2
-
+  mov  rdi, r13    # Arg1
+  mov  rsi, 1      # Arg2
   call extend
   test eax, eax
   jnz  .ret_block_p11
 
 # memmove(dest, src, idx)
-# Since arr->elem_size is used frequently, but only before memmove, I'll assign r8 to it. No need for callee-saved register.
+# Since arr->elem_size is used frequently here, I'll assign r8 to it. No need for a callee-saved register.
   mov r8, 8[r13]
 
   # Compute and set arg1 (rdi=dest)
@@ -646,25 +554,22 @@ insertidx:
 
   call memmove@PLT
 
-# setidx(&ar, &value, idx)
-  mov rdi, r13
-  mov rsi, r14
-  mov rdx, r15
+# setidx(&ar, &value, idx) inlined because checks are already validated at this point
+  mov rdx, 8[r13]    # Arg3 (rdx=elem_size)
+  mov rsi, r14       # Arg2 (rsi=&value)
 
-  call setidx
-  test eax, eax
-  jnz  .ret_block_p11
+  # Arg1 (rdi=dest)
+  imul r15, rdx      # idx*elem_size
+  mov  rdi, [r13]    # base
+  add  rdi, r15      # base + offset
 
+  call memcpy@PLT
   add QWORD PTR 16[r13], 1    # arr->count++
   xor eax, eax    # SUCCESS
   jmp .ret_block_p11
 
 .invalid_pushreq_p11:
   mov eax, -7
-  jmp .ret_block_p11
-
-.invalid_idx_p11:
-  mov eax, -8
   jmp .ret_block_p11
 
 .ret_block_p11:
@@ -683,7 +588,7 @@ insertidx:
 removeidx:
   push r13
   push r14
-  sub rsp, 8
+  sub  rsp, 8
 
   mov  eax, -5
   test rdi, rdi
@@ -693,38 +598,28 @@ removeidx:
   test rcx, rcx      # !arr->ptr
   jz   .ret_block_p12
 
-# boundcheck; preserve rdi and rsi
+# boundcheck inlined
   mov r13, rdi
   mov r14, rsi
 
-  # Arg3 (rdx=idx)
-  mov rdx, rsi
-
-  # Arg2 (rsi=arr->count)
-  mov rsi, 16[rdi]
-
-  # Arg1 (rdi=0)
-  xor rdi, rdi
-
-  call boundcheck
-  test eax, eax
-  jz   .invalid_idx_p12
+  cmp rsi, 16[rdi]    # idx < ub
+  jae .ret_block_p12
 
 # memmove(dest, src, bytes)
   mov r8, QWORD PTR 8[r13]    # arr->elem_size
 
   # Arg1 (rdi=dest)
-  mov  rcx, r14               # idx
-  imul rcx, r8                # rcx=idx*elem_size
-  mov  rdi, QWORD PTR [r13]   # base
-  add  rdi, rcx               # base + offset
+  mov  rcx, r14                # idx
+  imul rcx, r8                 # rcx=idx*elem_size
+  mov  rdi, QWORD PTR [r13]    # base
+  add  rdi, rcx                # base + offset
 
   # Arg2 (rsi=src)
-  mov  rcx, r14               # idx
-  add  rcx, 1                 # idx+1
-  imul rcx, r8                # rcx=(idx+1)*elem_size
-  mov  rsi, QWORD PTR [r13]   # base
-  add  rsi, rcx               # base + offset
+  mov  rcx, r14                # idx
+  add  rcx, 1                  # idx+1
+  imul rcx, r8                 # rcx=(idx+1)*elem_size
+  mov  rsi, QWORD PTR [r13]    # base
+  add  rsi, rcx                # base + offset
 
   # Arg3 (rdx=bytes)
   mov  rdx, QWORD PTR 16[r13]    # arr->count
@@ -733,13 +628,8 @@ removeidx:
   imul rdx, r8                   # bytes=rcx*elem_size
 
   call memmove@PLT
-  sub QWORD PTR 16[r13], 1       # arr->count--
-
+  sub QWORD PTR 16[r13], 1     # arr->count--
   xor eax, eax    # SUCCESS
-  jmp .ret_block_p12
-
-.invalid_idx_p12:
-  mov eax, -8
 
 .ret_block_p12:
   add rsp, 8
@@ -762,10 +652,9 @@ clearArr:
   test rcx, rcx
   jz   .ret_block_p13
 
-  mov QWORD PTR [rdi], 0    # arr->ptr
-  mov QWORD PTR 16[rdi], 0  # arr->count
-  mov QWORD PTR 8[rdi], 0   # arr->elem_size
-
+  mov QWORD PTR   [rdi], 0    # arr->ptr
+  mov QWORD PTR 16[rdi], 0    # arr->count
+  mov QWORD PTR  8[rdi], 0    # arr->elem_size
   xor eax, eax
 
 .ret_block_p13:
