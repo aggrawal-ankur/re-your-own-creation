@@ -1,12 +1,13 @@
 #include "dynstr.h"
 
 DynStrStatus init(DynString* str, size_t capacity){
-  if (str->cap != 0) return -ALREADY_INIT;
+  if (str->data) return -ALREADY_INIT;
   if (capacity == 0) return -INVALID_CAP;
 
-  str->data = malloc(capacity);
-  if (!str->data) return -MALLOC_FAILED;
+  void *tmp = malloc(capacity);
+  if (!tmp) return -MALLOC_FAILED;
 
+  str->data = tmp;
   str->len = 0;
   str->cap = capacity;
   str->data[0] = '\0';
@@ -16,10 +17,10 @@ DynStrStatus init(DynString* str, size_t capacity){
 
 DynStrStatus extendCap(DynString* str, size_t add){
   if (!str || !str->data) return -INVALID_DPTR;
-  if (str->cap >= add) return SUCCESS;
+  if (str->cap > add) return SUCCESS;
 
   size_t ncap = str->cap;
-  while (ncap < add+1) ncap *= 2;
+  while (ncap < add) ncap *= 2;
 
   void *tmp = realloc(str->data, ncap);
   if (!tmp) return -REALLOC_FAILED;
@@ -30,8 +31,6 @@ DynStrStatus extendCap(DynString* str, size_t add){
 }
 
 int lenstr(const char* str){
-  if (!str) return -1;
-
   int len = 0;
   while (*(str++) != '\0') len++;
   return len;
@@ -42,7 +41,7 @@ DynStrStatus populate(DynString* dest, const char* src){
   if (!src) return -INVALID_BUFF;
 
   int srclen = lenstr(src);
-  if (srclen == -1) return -INVALID_BUFF;
+  if (srclen == 0) return -INVALID_BUFF;
 
   size_t nlen = dest->len + srclen;
 
@@ -81,7 +80,7 @@ DynStrStatus copystr(const char* src, char* dest){
   if (!src) return -INVALID_BUFF;
 
   int len = lenstr(src);
-  if (len == -1) return INVALID_BUFF;
+  if (len == 0) return INVALID_BUFF;
 
   memcpy(dest, src, len);
   dest[len] = '\0';
@@ -239,7 +238,7 @@ DynStrStatus kmp_search(const char* str, const char* pat, kmp_result* kmp_obj){
 
   int slen = lenstr(str);
   int plen = lenstr(pat);
-  if (plen == -1 || slen == -1 || plen > slen) return -INVALID_BUFF;
+  if (plen == 0 || slen == 0 || plen > slen) return -INVALID_BUFF;
 
   size_t lps[plen];
   int res = kmp_build_lps(pat, plen, lps);
