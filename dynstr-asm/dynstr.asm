@@ -194,3 +194,157 @@ populate:
   pop rbx
   ret
 
+
+.global boundcheck
+.type boundcheck, @function
+
+# Function Parameters:
+#   rdi=lb
+#   rsi=ub
+#   rdx=idx
+boundcheck:
+  xor eax, eax
+  cmp rdx, rsi
+  jae .ret_block_p5
+  mov eax, 1
+
+.ret_block_p5:
+  ret
+
+
+.global getstr
+.type getstr, @function
+
+# Function Parameters:
+#   rdi=&str (dynstr)
+#   rsi=idx
+#   rdx=out_ptr (char**)
+getstr:
+  mov  eax, -4
+  test rdi, rdi
+  jz   .ret_block_p6
+
+  mov rcx, QWORD PTR [rdi]
+  jz  .ret_block_p6
+
+# boundcheck inlined;
+  cmp rsi, QWORD PTR 8[rdi]
+  jae .invalid_idx_p6
+
+  # I am not sure about this!
+  mov rdx, QWORD PTR [rdx]    # *out
+  mov rdi, QWORD PTR [rdi]    # str->data
+  lea rdx, [rdi + rsi]        # *out = str->data[idx]
+
+  xor eax, eax
+  jmp .ret_block_p6
+
+.invalid_idx_p6:
+  mov eax, -7
+
+.ret_block_p6:
+  ret
+
+
+.global getslicedstr
+.type getslicedstr, @function
+
+# Function Parameters:
+#   rdi=&str (dynstr)
+#   rsi=start
+#   rdx=end
+#   r10=&outstr (callee allocated buffer)
+getslicedstr:
+  push r13
+  push r14
+  push r15
+
+  mov  eax, -4
+  test rdi, rdi
+  jz   .ret_block_p7
+
+  mov  rcx, QWORD PTR [rdi]
+  test rcx, rcx
+  jz   .ret_block_p7
+
+# range validation
+  mov rcx, QWORD PTR 8[rdi]
+  cmp rsi, rcx
+  jae .ret_block_p7
+  cmp rdx, rcx
+  jae .ret_block_p7
+
+# memcpy; preserve rdi and r10 and compute slen in a callee-saved register
+  mov r13, rdi
+  mov r14, r10
+  mov r15, [rdx - rsi]
+
+  # Arg2 (rsi=&str->data[start])
+  mov rcx, rsi    # preserve start
+  mov rsi, QWORD PTR [r14]          # str->data (base)
+  lea rsi, QWORD PTR [r14 + rcx]    # &str->data[start]
+
+  mov  rdx,  r15     # Arg3 (rdx=slen)
+  mov  rdi, [r14]    # Arg1 (rdi=outstr)
+  call memcpy@PLT
+  mov QWORD PTR [r14 + r15], 0
+
+  xor eax, eax
+  jmp .ret_block_p7
+
+.invalid_range_p7:
+  mov eax, -8
+
+.ret_block_p7:
+  pop r15
+  pop r14
+  pop r13
+  ret
+
+
+.global copystr
+.type copystr, @function
+
+# Function Parameters:
+#   rdi=src  (const char*)
+#   rsi=dest (char*)
+copystr:
+  push rbx
+  push r14
+  sub  rsp, 8
+
+  test rdi, rdi
+  jz   .invalid_buff_p8
+
+# lenstr inlined;
+  xor ebx, ebx
+len_p8:
+  cmp BYTE PTR [rdi + ebx], 0
+  jz  .done_p8
+  add ebx, 1
+  jmp .len_p8
+
+# memcpy; preserve rdi
+  mov r14, rdi
+
+  mov   rdi, rsi
+  mov   rsi, r14
+  movzx rdx, ebx
+  call  memcpy@PLT
+
+  xor eax, eax
+  jmp .ret_block_p8
+
+.done_p8:
+  test ebx, ebx
+  jz   .invalid_buff_p8
+
+.invalid_buff_p8:
+  mov eax, -6
+
+.ret_block_p8:
+  add rsp, 8
+  pop r14
+  pop rbx
+  ret
+
