@@ -25,3 +25,15 @@ Session 2, ~1hr, 4 procedures done (char2lcase, char2ucase, islcase, isucase).
 ---
 
 Session 3, ~190m (>3h), 2 procedures done (tolcase and toucase). They were inline heavy. I've written the assembly, but I know there will subtle mistakes.
+
+---
+
+Session 4, ~2hr, next 2 procedures done (cmp2strs and findchar).
+
+In cmp2strs, I was stuck at returns (releasing memory, register popping) because the procedure was using so many registers on the second path and only 1 register on the first path. This time, I separated register pushes because the number was huge, which made returns complicated. In the end, I separated the return paths as well.
+
+findchar was simple.
+
+Today I've written 635 lines of assembly. I know the metric is not the best, but 635 lines of handwritten x64-assembly is something I could've never thought I'd write any day by any chance. Thanks to my past self for doing all that unglamorous work, I am grateful for it.
+
+Done for the day.

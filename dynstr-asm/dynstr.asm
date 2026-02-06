@@ -640,3 +640,192 @@ toucase:
   pop rbx
   ret
 
+
+.global cmp2strs
+.type cmp2strs, @function
+
+# Function Parameters
+#   rdi=str1 (const dynstr*)
+#   rsi=str2 (const dynstr*)
+#   rdx=sensitivity (int)
+cmp2strs:
+  push r13
+
+  xor  eax, eax
+  test rdi, rdi
+  jz   .ret_block_p15_1
+
+  mov  rcx, QWORD PTR [rdi]
+  test rcx, rcx
+  jz   .ret_block_p15_1
+
+  test rsi, rsi
+  jz   .ret_block_p15_1
+
+  mov  rcx, QWORD PTR [rsi]
+  test rcx, rcx
+  jz   .ret_block_p15_1
+
+  mov  rcx, QWORD PTR 8[rdi]
+  mov  r10, QWORD PTR 8[rsi]
+  test rcx, r10
+  jnz  .strs_not_eq_p15_1
+
+# Case sensitive (0)
+  mov  rdx, QWORD PTR 8[rdi]    # Arg3 (rdx=str1->len)
+  mov  rsi, QWORD PTR  [rsi]    # Arg2 (rsi=str2->data)
+  mov  rdi, QWORD PTR  [rdi]    # Arg1 (rdi=str1->data)
+  call memcmp@PLT
+  test rax, rax
+  jnz  .strs_not_eq_p15_1
+
+  xor eax, eax
+  jmp .ret_block_p15_1
+
+# Case insensitive (1)
+  # Since pushing registers is only required in case of insensitive check.
+  # But for alignment purpose, we need to push one register at least, so only two registers are being pushed here.
+  push r14    # tmp1[str1->len+1]
+  push r15    # tmp2[str2->len+1]
+  push rbp    # str1
+  push rbx    # str2
+  mov  rbp, rdi
+  mov  rbx, rsi
+
+  # VLA aligned-space calculation
+  add rcx, r10    # total bytes required: (rcx, r10)
+  add rcx, 2      # count for '\0'
+  add rcx, 15     # (total + 15)
+  and rcx, -16    # (total + 15) & ~15
+  sub rsp, rcx
+
+  mov r14, rsp                # &tmp1[str1->len+1]
+  lea r15, [rsp + r10 + 1]    # &tmp2[str2->len+1]
+
+# tolcase calls
+  mov  rdi, QWORD PTR [rbp]    # Arg1 (rdi=str1->data)
+  mov  rsi, r14                # Arg2 (rsi=tmp1)
+  call tolcase
+  test eax, eax
+  jnz  .cmp_failed_p15
+
+  mov  rdi, QWORD PTR [rbx]    # Arg1 (rdi=str2->data)
+  mov  rsi, r15                # Arg2 (rsi=tmp2)
+  call tolcase
+  test eax, eax
+  jnz  .cmp_failed_p15
+
+# memcmp
+  mov  rdi, r14
+  mov  rsi, r15
+  mov  rdx, 8[rbp]
+  call memcmp@PLT
+  test rax, rax
+  jnz  .strs_not_eq_p15_2
+
+  xor eax, eax
+  jmp .release_mem_p15
+
+.strs_not_eq_p15_1:
+  mov eax, -13
+
+.ret_block_p15_1:
+  pop r13
+  ret
+
+.strs_not_eq_p15_2:
+  mov eax, -13
+  jmp .ret_block_p15_2
+
+.cmp_failed_p15:
+  mov eax, -14
+
+.ret_block_p15_2:
+  pop rbx
+  pop rbp
+  pop r15
+  pop r14
+  pop r13
+  ret
+
+
+.global findchar
+.type findchar, @function
+
+# Function Parameters:
+#   rdi=str (const char*)
+#   sil=c   (char to find)
+#   edx=sensitivity
+#   r10=&count (out_ptr, int*)
+findchar:
+  test rdi, rdi
+  jz   .invalid_buff_p16
+
+  push rbx    # count
+  xor  ebx, ebx
+
+# Case insensitive (1)
+  # Hoist char2lcase(c) outside in r8b
+  mov r8b, sil
+
+  cmp sil, 65
+  jb  .insensitive_loop_p16
+  cmp sil, 90
+  ja  .insensitive_loop_p16
+
+  or r8b, 0x20
+
+  # loop over each character; char2lcase inlined
+  xor rax, rax    # iterator
+.insensitive_loop_p16:
+  mov cl, BYTE PTR [rdi + rax]
+  cmp cl, 0
+  jz  .done_p16
+
+  cmp cl, 65
+  jb  .check_p16
+  cmp cl, 90
+  ja  .check_p16
+
+  or cl, 0x20
+
+.check_p16:
+  add eax, 1    # i++
+  cmp cl, r8b
+  jne .insensitive_loop_p16
+
+  add ebx, 1    # occ++
+  jmp .insensitive_loop_p16
+
+# Case sensitive (0)
+  xor rax, rax
+.sensitive_loop_p16:
+  mov cl, BYTE PTR [rdi + rax]
+  cmp cl, 0
+  jz  .done_p16
+
+  add eax, 1    # i++
+  cmp cl, sil
+  jne .sensitive_loop_p16
+
+  add ebx, 1    # occ++
+  jmp .sensitive_loop_p16
+
+.done_p16:
+  test ebx, ebx
+  jz   .not_found_p16
+
+  mov DWORD PTR [r10], ebx
+  jmp .ret_block_p16
+
+.invalid_buff_p16:
+  mov eax, -6
+  jmp .ret_block_p16
+
+.not_found_p16:
+  mov eax, -17
+
+.ret_block_p16:
+  pop rbx
+  ret
+
