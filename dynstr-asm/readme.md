@@ -17,3 +17,7 @@ Signing off.
 Good morning. I woke up fresh and relaxed, and I am done with my first session of (~56 minutes) where I've implemented the next 4 procedures (boundcheck, getstr, getslicedstr and copystr).
 
 I am already inlining lenstr and boundcheck whenever I get the opportunity, and I am going to do so with copystr as well. I see a lot of functions here can be inlined and I am not going to lose that opportunity to improve my understanding of function inlining and how to glue functions efficiently.
+
+---
+
+Session 2, ~1hr, 4 procedures done (char2lcase, char2ucase, islcase, isucase).

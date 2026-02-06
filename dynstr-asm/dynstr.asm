@@ -348,3 +348,119 @@ len_p8:
   pop rbx
   ret
 
+
+.global char2lcase
+.type char2lcase, @function
+
+# Function Parameters
+#   dil=c (char)  (dil=lower 8-bits of rdi)
+char2lcase:
+  mov al, dil
+
+  cmp dil, 65
+  jb  .ret_block_p9
+  cmp dil, 90
+  ja  .ret_block_p9
+
+  or  al, 0x20
+
+.ret_block_p9:
+  ret
+
+.global char2ucase
+.type char2ucase, @function
+
+# Function Parameters
+#   dil=c (char)  (dil=lower 8-bits of rdi)
+char2ucase:
+  mov al, dil
+
+  cmp dil, 97
+  jb  .ret_block_p10
+  cmp dil, 122
+  ja  .ret_block_p10
+
+  and al, -33    # (~0x20)
+
+.ret_block_p10:
+  ret
+
+.global islcase
+.type islcase, @function
+
+# Function Parameters
+#   rdi=str  (const char*)
+islcase:
+  test rdi, rdi
+  jz   .invalid_buff_p11
+
+  mov eax, -9
+  xor rcx, rcx
+
+.check_loop_p11:
+  mov dl, BYTE PTR [rdi + rcx]
+  cmp dl, 0
+  jz  .done_p11
+
+  cmp dl, 65
+  jb  .ret_block_p11
+  cmp dl, 90
+  ja  .ret_block_p11
+
+  add rcx, 1
+  jmp .check_loop_p11
+
+.invalid_buff_p11:
+  mov eax, -6
+  jmp .ret_block_p11
+
+.done_p11:
+  test rcx, rcx
+  jz   .ret_block_p11
+
+.success_p11:
+  xor eax, eax
+
+.ret_block_p11:
+  ret
+
+
+.global isucase
+.type isucase, @function
+
+# Function Parameters:
+#   rdi=str (const char*)
+isucase:
+  test rdi, rdi
+  jz   .invalid_buff_p12
+
+  mov eax, -9
+  xor rcx, rcx
+
+.check_loop_p12:
+  mov dl, BYTE PTR [rdi + rcx]
+  cmp dl, 0
+  jz  .done_p12
+
+  cmp dl, 97
+  jb  .ret_block_p12
+  cmp dl, 122
+  ja  .ret_block_p12
+
+  add rcx, 1
+  jmp .check_loop_p12
+
+.invalid_buff_p12:
+  mov eax, -6
+  jmp .ret_block_p12
+
+.done_p12:
+  test rcx, rcx
+  jz   .ret_block_p12
+
+.success_p12:
+  xor eax, eax
+
+.ret_block_p12:
+  ret
+
