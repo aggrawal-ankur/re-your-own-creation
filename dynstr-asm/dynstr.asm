@@ -395,7 +395,7 @@ islcase:
   jz   .invalid_buff_p11
 
   mov eax, -9
-  xor rcx, rcx
+  xor rcx, rcx    # SUCCESS hoisted
 
 .check_loop_p11:
   mov dl, BYTE PTR [rdi + rcx]
@@ -435,7 +435,7 @@ isucase:
   jz   .invalid_buff_p12
 
   mov eax, -9
-  xor rcx, rcx
+  xor rcx, rcx    # SUCCESS hoisted
 
 .check_loop_p12:
   mov dl, BYTE PTR [rdi + rcx]
@@ -462,5 +462,181 @@ isucase:
   xor eax, eax
 
 .ret_block_p12:
+  ret
+
+
+.global tolcase
+.type tolcase, @function
+
+# Function Parameters
+#   rdi=str (const char*)
+#   rsi=lcase (caller-allocated buffer to put the lowercase string into)
+tolcase:
+  push rbx    # rsi
+  push r13    # len(str)
+  sub  rsp, 8
+
+  test rdi, rdi
+  jz   .invalid_buff_p13
+
+# copystr inlined; memcpy, basically
+# preserve rsi only as rdi is no longer used after this.
+  mov rbx, rsi
+
+  mov rsi, rdi  # Arg2 (rsi=str)
+  mov rdi, rsi  # Arg1 (rdi=lcase)
+
+  # Arg3 (rdx=bytes) need to be calculated
+  xor r13, r13
+.len_p13:
+  cmp BYTE PTR [rdi + r13], 0
+  jz  .done_p13
+
+  add r13, 1
+  jmp .len_p13
+
+.done_p13:
+  test r13, r14
+  jz   .invalid_buff_p13
+
+  mov rdx, r13    # Arg3 (rdx=r13=bytes)
+  call memcpy@PLT
+  mov BYTE PTR [rbx + r13], 0
+  
+# Loop over each character and run char2lcase on it.
+  xor rax, rax    # iterator
+.convert2lcase_p13:
+  mov dl, BYTE PTR [rbx + rax]
+  cmp dl, 0
+  jz  .check_lcase_p13
+
+  # char2lcase inlined;
+  cmp dl, 65
+  jb .end_p13    # Not uppercase, do nothing.
+  cmp dl, 90
+  ja .end_p13    # Not uppercase, do nothing.
+
+  or dl, 0x20     # Uppercase confirmed, convert.
+  mov BYTE PTR [rbx + rax], dl    # lcase[i] = char2lcase(lcase[i])
+
+.end_p13:
+  add rax, 1
+  jmp .check_lcase_p13
+
+# islcase inlined
+  xor eax, eax    # SUCCESS hoisted
+  xor rcx, rcx    # iterator
+.check_lcase_p13:
+  mov dl, BYTE PTR [rbx + rcx]
+  cmp dl, 0
+  jz  .ret_block_p13
+
+  cmp dl, 65
+  jae .lcase_failed_p13
+  cmp dl, 90
+  jbe .lcase_failed_p13
+
+  add rcx, 1
+  jmp .check_lcase_p13
+
+.invalid_buff_p13:
+  mov eax, -6
+  jmp .ret_block_p13
+
+.lcase_failed_p13:
+  mov eax, -11
+
+.ret_block_p13:
+  add rsp, 8
+  pop r13
+  pop rbx
+  ret
+
+
+.global toucase
+.type toucase, @function
+
+# Function Parameters:
+#   rdi=str (const char*)
+#   rsi=ucase (char*) (callee-allocated buffer to put the uppercase string into)
+toucase:
+  push rbx
+  push r13
+  sub  rsp, 8
+
+  test rdi, rdi
+  jz   .ret_block_p14
+
+# copystr inlined; memcpy, basically
+# preserve rsi as rdi is not used after.
+  mov rbx, rsi
+
+  mov rsi, rdi  # Arg2 (rsi=str)
+  mov rdi, rsi  # Arg1 (rdi=ucase)
+
+  # Arg3 (rdx=bytes) needs calculation
+  xor r13, r13
+.len_p14:
+  cmp BYTE PTR [rbx + r13], 0
+  jz  .done_p14
+
+  add r13, 1
+  jmp .len_p14
+
+.done_p14:
+  test r13, r13
+  jz   .invalid_buff_p14
+
+  mov  rdx, r13  # Arg3 (rdx=bytes)
+  call memcpy@PLT
+  mov BYTE PTR [rbx + r13], 0
+
+# loop over each character and run char2ucase
+  xor rax, rax
+.convert2ucase_p14:
+  mov dl, BYTE PTR [rbx + rax]
+  cmp dl, 0
+  jz  .check_ucase_p14
+
+  # char2ucase inlined;
+  cmp dl, 97
+  jb  .end_p14    # Not lowercase, do nothing.
+  cmp dl, 122
+  ja  .end_p14    # Not lowercase, do nothing.
+
+  and dl, -33     # Lowercase confirmed, convert.
+  mov BYTE PTR [rbx + rax], dl
+
+.end_p14:
+  add rax, 1
+  jmp .convert2ucase_p14
+
+# isucase inlined
+  xor eax, eax    # SUCCESS hoisted
+  xor rcx, rcx    # iterator
+.check_ucase_p14:
+  mov dl, BYTE PTR [rbx + rcx]
+  cmp dl, 0
+  jz  .ret_block_p14
+
+  cmp dl, 97
+  jae .ucase_failed_p14
+  cmp dl, 122
+  jbe .ucase_failed_p14
+
+  add rcx, 1
+  jmp .check_ucase_p14
+
+.invalid_buff_p14:
+  mov eax, -6
+  jmp .ret_block_p14
+
+.ucase_failed_p14:
+  mov eax, -12
+
+.ret_block_p14:
+  add rsp, 8
+  pop r13
+  pop rbx
   ret
 

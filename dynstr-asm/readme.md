@@ -21,3 +21,7 @@ I am already inlining lenstr and boundcheck whenever I get the opportunity, and 
 ---
 
 Session 2, ~1hr, 4 procedures done (char2lcase, char2ucase, islcase, isucase).
+
+---
+
+Session 3, ~190m (>3h), 2 procedures done (tolcase and toucase). They were inline heavy. I've written the assembly, but I know there will subtle mistakes.
