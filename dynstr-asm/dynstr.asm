@@ -13,9 +13,9 @@ init:
   push r15
   sub  rsp, 8
 
-  mov  eax, -1    # No separate branch because it's destined to execute if init is ran on an initialized dynstr by mistake
-  test rdi, rdi
-  jnz  .ret_block_p1
+  mov eax, -1    # No separate branch because it's destined to execute if init is ran on an initialized dynstr by mistake
+  cmp QWORD PTR [rdi], 0
+  jnz .ret_block_p1
 
   test rsi, rsi
   jz   .invalid_cap_p1
@@ -90,7 +90,7 @@ extendCap:
 
   mov QWORD PTR   [r14], rax
   mov QWORD PTR 16[r14], r15
-  jmp .success
+  jmp .success_p2
 
 .realloc_failed_p2:
   mov eax, -5
@@ -111,12 +111,12 @@ extendCap:
 # Function Parameters:
 #   rdi=*buff (const char)
 lenstr:
-  xor eax, eax
+  xor rax, rax
 .len:
-  cmp BYTE PTR [rdi + eax], 0
+  cmp BYTE PTR [rdi + rax], 0
   jz  .ret_block_p3
 
-  add eax, 1
+  add rax, 1
   jmp .len
 
 .ret_block_p3:
@@ -150,40 +150,40 @@ populate:
   mov r15, rsi
 
 # lenstr inlined
-  xor ebx, ebx
+  xor rbx, rbx
 .len_p4:
-  cmp BYTE PTR [rsi + ebx], 0
+  cmp BYTE PTR [rsi + rbx], 0
   jz  .done_p4
-  add ebx, 1
+  add rbx, 1
   jmp .len_p4
 
-  movzx r13, ebx
-  add   r13, 8[rdi]    ; nlen
+.done_p4:
+  test rbx, rbx
+  jz   .invalid_buff_p4
 
+# extend
   # Arg1 (rdi=dest) already set
-  mov  rsi, r13
+  mov  rsi, rbx    # Arg2 (rsi=srclen+1)
   add  rsi, 1
-  call extend
+  call extendCap
   test eax, eax
   jnz  .ret_block_p4
 
 # memcpy;
-  movzx rdx, ebx
-  mov   rsi, r15
+  # Arg1 (rdi=dest)
+  mov rdi, [r14]                 # base
+  add rdi, QWORD PTR 8[r14]      # + offset
 
-  mov rdi, r14
-  add rdi, QWORD PTR 8[r14]
-
+  mov  rsi, r15    # Arg2 (rsi=src)
+  mov  rdx, rbx    # Arg3 (rdx=bytes)
   call memcpy@PLT
-  
-  mov QWORD PTR 8[r14], r13
-  mov rcx, QWORD PTR [r14]
-  mov QWORD PTR [rcx + r13], 0
-  xor eax, eax
 
-.done_p4:
-  test ebx, ebx
-  jz   .invalid_buff_p4
+  add QWORD PTR 8[r14], rbx       # dest->len += srclen
+  mov rcx, QWORD PTR [r14]        # base
+  mov QWORD PTR [rcx + rbx], 0    # NULL-terminator
+
+  xor eax, eax
+  jmp .ret_block_p4
 
 .invalid_buff_p4:
   mov eax, -6
@@ -232,9 +232,8 @@ getstr:
   jae .invalid_idx_p6
 
   # I am not sure about this!
-  mov rdx, QWORD PTR [rdx]    # *out
-  mov rdi, QWORD PTR [rdi]    # str->data
-  lea rdx, [rdi + rsi]        # *out = str->data[idx]
+  lea rcx, [rcx + rsi]        # *out = &str->data[idx]
+  mov QWORD PTR [rdx], rcx    # *out
 
   xor eax, eax
   jmp .ret_block_p6
@@ -270,24 +269,28 @@ getslicedstr:
 # range validation
   mov rcx, QWORD PTR 8[rdi]
   cmp rsi, rcx
-  jae .ret_block_p7
+  jae .invalid_range_p7
   cmp rdx, rcx
-  jae .ret_block_p7
+  jae .invalid_range_p7
 
 # memcpy; preserve rdi and r10 and compute slen in a callee-saved register
-  mov r13, rdi
-  mov r14, r10
-  mov r15, [rdx - rsi]
+  mov r13, rdi    # &str
+  mov r14, r10    # &outstr
+  mov rcx, rsi    # preserve start
+
+  # (Arg3 rdx=slen)
+  sub rdx, rsi    # end-start
+  mov r15, rdx    # preserve slen
+
+  # Arg1 (rdi=outstr)
+  mov rdi, r14
 
   # Arg2 (rsi=&str->data[start])
-  mov rcx, rsi    # preserve start
-  mov rsi, QWORD PTR [r14]          # str->data (base)
-  lea rsi, QWORD PTR [r14 + rcx]    # &str->data[start]
+  mov r10, QWORD PTR [r13]    # str->data (base)
+  lea rsi, [r10 + rcx]        # &str->data[start]
 
-  mov  rdx,  r15     # Arg3 (rdx=slen)
-  mov  rdi, [r14]    # Arg1 (rdi=outstr)
-  call memcpy@PLT
-  mov QWORD PTR [r14 + r15], 0
+  # call memcpy@PLT
+  mov BYTE PTR [r14 + r15], 0
 
   xor eax, eax
   jmp .ret_block_p7
@@ -317,11 +320,11 @@ copystr:
   jz   .invalid_buff_p8
 
 # lenstr inlined;
-  xor ebx, ebx
-len_p8:
-  cmp BYTE PTR [rdi + ebx], 0
+  xor rbx, rbx
+.len_p8:
+  cmp BYTE PTR [rdi + rbx], 0
   jz  .done_p8
-  add ebx, 1
+  add rbx, 1
   jmp .len_p8
 
 # memcpy; preserve rdi
@@ -329,14 +332,14 @@ len_p8:
 
   mov   rdi, rsi
   mov   rsi, r14
-  movzx rdx, ebx
+  mov rdx, rbx
   call  memcpy@PLT
 
   xor eax, eax
   jmp .ret_block_p8
 
 .done_p8:
-  test ebx, ebx
+  test rbx, rbx
   jz   .invalid_buff_p8
 
 .invalid_buff_p8:
@@ -724,7 +727,7 @@ cmp2strs:
   jnz  .strs_not_eq_p15_2
 
   xor eax, eax
-  jmp .release_mem_p15
+  jmp .ret_block_p15_2
 
 .strs_not_eq_p15_1:
   mov eax, -13
@@ -901,13 +904,13 @@ kmp_build_lps:
   mov QWORD PTR [rdx], 0    # lps[0]=0
 
   mov r10, 1    # iterator (i=1, init val)
-loop_p19:
+.loop_p19:
   cmp r10, rsi
   jae .ret_block_p19
 
-  mov r8l, BYTE PTR [rdi + r10]    # pat[i]
-  mov r9l, BYTE PTR [rdi + rcx]    # pat[len]
-  cmp r8l, r9l
+  mov r8b, BYTE PTR [rdi + r10]    # pat[i]
+  mov r9b, BYTE PTR [rdi + rcx]    # pat[len]
+  cmp r8b, r9b
   jnz .elseif_p19
 
   add rcx, 1    # len++
@@ -1005,7 +1008,7 @@ kmp_search:
   xor rsi, rsi    # k=0
   xor rdx, rdx    # count=0
 
-while_p20:
+.while_p20:
   cmp rdi, r12    # i < slen
   jae .check_count_p20
 
@@ -1021,7 +1024,8 @@ while_p20:
   jne .while_p20
 
   mov r9, QWORD PTR 8[rbx]    # kmp_obj->indices
-  mov rax, [rdi - rsi]        # (i-k)
+  mov rax, rdi
+  sub rax, rsi    # (i-k)
   mov QWORD PTR [r9 + rdx], rax    # kmp_obj->indices[count]=(i-k)
 
   add rdx, 1    # count++

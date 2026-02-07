@@ -43,14 +43,12 @@ DynStrStatus populate(DynString* dest, const char* src){
   int srclen = lenstr(src);
   if (srclen == 0) return -INVALID_BUFF;
 
-  size_t nlen = dest->len + srclen;
-
-  int res = extendCap(dest, nlen+1);
+  int res = extendCap(dest, srclen+1);
   if (res != SUCCESS) return res;
 
   memcpy(dest->data+dest->len, src, srclen);
-  dest->len = nlen;
-  dest->data[nlen] = '\0';
+  dest->len += srclen;
+  dest->data[dest->len] = '\0';
 
   return SUCCESS;
 }
