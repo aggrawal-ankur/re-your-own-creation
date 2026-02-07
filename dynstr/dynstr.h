@@ -9,10 +9,10 @@
 // Return codes
 typedef enum {
   SUCCESS,
-  ALREADY_INIT,
+  INIT_ALREADY,
   INVALID_CAP,
   MALLOC_FAILED,
-  INVALID_DPTR,
+  INIT_FIRST,
   REALLOC_FAILED,
   INVALID_BUFF,
   INVALID_IDX,
@@ -53,7 +53,7 @@ int lenstr(const char* str);
 DynStrStatus populate(DynString* dest, const char* src);
 
 // Verify an idx against a set of bounds
-DynStrStatus boundcheck(size_t lb, size_t ub, size_t idx);
+int boundcheck(size_t lb, size_t ub, size_t idx);
 
 // Returns a pointer to the dynamic string (only declare a ptr variable in the callee, no buffer required)
 DynStrStatus getstr(const DynString* str, size_t idx, char** out);

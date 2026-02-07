@@ -53,3 +53,24 @@ Session 2, ~1h 30m, dynstr.asm done.
 Line stats: 1157 lines in total.
 
 As usual, the original source has underwent some minor changes, so I'll test the source first and make changes in the assembly if further changes are made. Then I'll test my handwritten assembly.
+
+---
+
+45 mins and I am done writing tests.c and dynstr.c is working fine.
+
+The first change was in the logic of extendCap:
+```c
+if (str->cap > add) return SUCCESS;
+// to
+if (str->cap > (str->len + 1 + add)) return SUCCESS;
+```
+Early logic was wrong, so I've replaced it.
+
+The second one was in getstr's boundcheck:
+```c
+if (boundcheck(0, str->len, idx)) return -INVALID_IDX;
+// to
+if (boundcheck(0, str->len, idx) != 1) return -INVALID_IDX;
+```
+
+Everything else is fine. Next comes testing **dynstr.asm**.
