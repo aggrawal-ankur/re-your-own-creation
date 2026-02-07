@@ -829,3 +829,159 @@ findchar:
   pop rbx
   ret
 
+
+.global clearStr
+.type clearStr, @function
+
+# Function Parameters:
+#   rdi=str (dynstr)
+  mov eax, -4
+  test rdi, rdi
+  jz   .ret_block_p17
+
+  mov  rcx, QWORD PTR [rdi]
+  test rcx, rcx
+  jz   .ret_block_p17
+
+  mov QWORD PTR 8[rdi], 0
+  mov QWORD PTR [rdi], 0
+  xor eax, eax
+
+.ret_block_p17:
+  ret
+
+
+.global freeStr
+.type freeStr, @function
+
+# Function Parameters:
+#   rdi=str (dynstr)
+  push rbx
+  mov  eax, -4
+
+  test rdi, rdi
+  jz   .ret_block_p18
+
+  mov  rcx, QWORD PTR [rdi]
+  test rcx, rcx
+  jz   .ret_block_p18
+
+# free@PLT; preserve rdi
+  mov rbx, rdi
+
+  mov  rdi, [rdi]
+  call free@PLT
+
+  mov QWORD PTR  8[rbx], 0
+  mov QWORD PTR 16[rbx], 0
+  xor eax, eax
+
+.ret_block_p18:
+  pop rbx
+  ret
+
+
+.global kmp_build_lps
+.type kmp_build_lps, @function
+
+# Function Parameters:
+#   rdi=pat  (const char*, pattern-string)
+#   rsi=plen (pattern-string length, size_t)
+#   rdx=&lps (size_t *lps)
+kmp_build_lps:
+  mov  eax, -6
+  test rdi, rdi
+  jz   .ret_block_p19
+
+  test rsi, rsi
+  jz   .ret_block_p19
+
+  xor eax, eax    # SUCCESS hoisted
+  xor rcx, rcx              # len=0
+  mov QWORD PTR [rdx], 0    # lps[0]=0
+
+  mov r10, 1    # iterator (i=1, init val)
+loop_p19:
+  cmp r10, rsi
+  jae .ret_block_p19
+
+  mov r8l, BYTE PTR [rdi + r10]    # pat[i]
+  mov r9l, BYTE PTR [rdi + rcx]    # pat[len]
+  cmp r8l, r9l
+  jnz .elseif_p19
+
+  add rcx, 1    # len++
+  mov QWORD PTR [rdx + r10], rcx    # lps[i] = len
+  add r10, 1    # i++
+  jmp .loop_p19
+
+.elseif_p19:
+  cmp rcx, 0
+  jz  .else_p19
+
+  mov rcx, QWORD PTR [rdx + rcx - 1]    # len = lps[len-1]
+  jmp .loop_p19
+
+.else_p19:
+  mov QWORD PTR [rdx + r10], 0    # lps[i]=0
+  add r10, 1    # i++
+  jmp .loop_p19
+
+.ret_block_p19:
+  ret
+
+
+.global kmp_search
+.type kmp_search, @function
+
+# Function Parameters;
+#   rdi=str (const char*, haystack)
+#   rsi=pat (const char*, needle)
+#   rdx=kmp_obj (kmp_result*)
+kmp_search:
+  push r12
+  push r13
+
+  test rdi, rdi
+  jz   .invalid_buff_p20
+
+  test rsi, rsi
+  jz   .invalid_buff_p20
+
+  xor r12, r12    # slen
+  xor r13, r13    # plen
+
+# lenstr(str) inlined;
+.len_str_p20:
+  cmp BYTE PTR [rdi + r12], 0
+  jz  .len_pat_p20
+
+  add r12, 1
+  jmp .len_str_p20
+
+# lenstr(pat) inlined;
+.len_pat_p20:
+  cmp BYTE PTR [rsi + r13], 0
+  jz  .check_p20
+
+  add r13, 1
+  jmp .len_pat_p20
+
+.check_p20:
+  test r12, r12
+  jz   .invalid_buff_p20
+
+  test r13, r13
+  jz   .invalid_buff_p20
+
+  cmp r13, r12
+  jae .invalid_buff_p20
+
+# CONTINUE FROM HERE
+
+.invalid_buff_p20:
+  mov eax, -6
+
+.ret_block_p20:
+  ret
+

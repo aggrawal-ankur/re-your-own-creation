@@ -37,3 +37,11 @@ findchar was simple.
 Today I've written 635 lines of assembly. I know the metric is not the best, but 635 lines of handwritten x64-assembly is something I could've never thought I'd write any day by any chance. Thanks to my past self for doing all that unglamorous work, I am grateful for it.
 
 Done for the day.
+
+# Day 3
+
+***February 07, 2026***
+
+Session 1, 54 mins, kmp_build_lps done and kmp_search in progress.
+
+---
