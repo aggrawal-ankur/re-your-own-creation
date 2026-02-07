@@ -45,3 +45,11 @@ Done for the day.
 Session 1, 54 mins, kmp_build_lps done and kmp_search in progress.
 
 ---
+
+***01:14 PM***
+
+Session 2, ~1h 30m, dynstr.asm done.
+
+Line stats: 1157 lines in total.
+
+As usual, the original source has underwent some minor changes, so I'll test the source first and make changes in the assembly if further changes are made. Then I'll test my handwritten assembly.

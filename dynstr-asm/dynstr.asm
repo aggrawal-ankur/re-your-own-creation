@@ -939,8 +939,12 @@ loop_p19:
 #   rsi=pat (const char*, needle)
 #   rdx=kmp_obj (kmp_result*)
 kmp_search:
-  push r12
-  push r13
+  push r12    # slen
+  push r13    # plen
+  push r14    # VLA *lps
+  push r15    # str (rdi)
+  push rbp    # pat (rsi)
+  push rbx    # kmp_obj (rdx)
 
   test rdi, rdi
   jz   .invalid_buff_p20
@@ -977,11 +981,176 @@ kmp_search:
   cmp r13, r12
   jae .invalid_buff_p20
 
-# CONTINUE FROM HERE
+# VLA allocation (size_t lps[plen])
+  mov rcx, r13
+  add rcx, 15     # req + 15
+  and rcx, -16    # (req + 15) & ~15
+  sub rsp, rcx
+  mov r14, rsp    # size_t lps[plen]
+
+# kmp_build_lps; preserve rdi, rsi and rdx
+  mov r15, rdi
+  mov rbp, rsi
+  mov rbx, rdx
+
+  mov  rdi, rbp    # Arg1 (rdi=pat)
+  mov  rsi, r13    # Arg2 (rsi=plen)
+  mov  rdx, r14    # Arg3 (rdx=lps)
+  call kmp_build_lps
+  test eax, eax
+  jnz  .ret_block_p20
+
+# while loop
+  xor rdi, rdi    # i=0
+  xor rsi, rsi    # k=0
+  xor rdx, rdx    # count=0
+
+while_p20:
+  cmp rdi, r12    # i < slen
+  jae .check_count_p20
+
+  mov cl, BYTE PTR [r15 + rdi]    # str[i]
+  mov al, BYTE PTR [rbp + rsi]    # pat[k]
+  cmp cl, al
+  jne .elseif_p20
+
+  add rdi, 1    # i++
+  add rsi, 1    # k++
+
+  cmp rsi, r13    # (k == plen)
+  jne .while_p20
+
+  mov r9, QWORD PTR 8[rbx]    # kmp_obj->indices
+  mov rax, [rdi - rsi]        # (i-k)
+  mov QWORD PTR [r9 + rdx], rax    # kmp_obj->indices[count]=(i-k)
+
+  add rdx, 1    # count++
+  mov rsi, [r14 + r13 - 1]    # k = lps[plen-1]
+  jmp .while_p20
+
+.elseif_p20:
+  test rsi, rsi
+  jz   .else_p20
+
+  mov rsi, QWORD PTR [r14 + rsi - 1]    # k = lps[k-1]
+  jmp .while_p20
+
+.else_p20:
+  add rdi, 1
+  jmp .while_p20
+
+.check_count_p20:
+  test rdx, rdx
+  jnz  .set_count_p20
+
+  mov QWORD PTR  [rbx], 0
+  mov QWORD PTR 8[rbx], 0
+  mov eax, -16    # SUBSTR_NOT_FOUND
+  jmp .ret_block_p20
+
+.set_count_p20:
+  mov QWORD PTR [rbx], rdx    # kmp_obj->count = count (rdx)
+  xor eax, eax    # SUCCESS
+  jmp .ret_block_p20
 
 .invalid_buff_p20:
   mov eax, -6
 
 .ret_block_p20:
+  pop rbx
+  pop rbp
+  pop r15
+  pop r14
+  pop r13
+  pop r12
+  ret
+
+
+.global isin
+.type isin, @function
+
+# Function Parameters:
+#   rdi=kmp_res (kmp_result*)
+isin:
+  mov  eax, -15
+  test rdi, rdi
+  jz   .ret_block_p21
+
+  cmp QWORD PTR [rdi], 0
+  jz  .substr_not_found_p21
+
+  xor eax, eax
+  jmp .ret_block_p21
+
+.substr_not_found_p21:
+  mov eax, -16
+
+.ret_block_p21:
+  ret
+
+
+.global firstOccurrence
+.type firstOccurrence, @function
+
+# Function Parameters:
+#   rdi=kmp_res (kmp_result*)
+#   rsi=idx (int*, out_ptr)
+firstOccurrence:
+  mov  eax, -15
+  test rdi, rdi
+  jz   .ret_block_p22
+
+  cmp QWORD PTR [rdi], 0
+  jz  .substr_not_found_p22
+  cmp QWORD PTR 8[rdi], 0
+  jz  .substr_not_found_p22
+
+  mov rcx, QWORD PTR 8[rdi]
+  mov rcx, QWORD PTR  [rcx]
+  mov QWORD PTR [rsi], rcx     # *idx = kmp_res->indices[0]
+
+  xor eax, eax
+  jmp .ret_block_p22
+
+.substr_not_found_p22:
+  mov QWORD PTR [rsi], -1
+  mov eax, -16
+
+.ret_block_p22:
+  ret
+
+
+.global allOccurrences
+.type allOccurrences, @function
+
+# Function Parameters:
+#   rdi=kmp_res (kmp_result*)
+#   rsi=indices (size_t**, outptr)
+#   rdx=count (int*)
+allOccurrences:
+  mov  eax, -15
+  test rdi, rdi
+  jz   .ret_block_p23
+
+  cmp QWORD PTR [rdi], 0
+  jz  .substr_not_found_p23
+  cmp QWORD PTR 8[rdi], 0
+  jz  .substr_not_found_p23
+
+  mov rcx, QWORD PTR 8[rdi]
+  mov QWORD PTR [rsi], rcx
+
+  mov rcx, QWORD PTR [rdi]
+  mov QWORD PTR [rdx], rcx
+
+  xor eax, eax
+  jmp .ret_block_p23
+
+.substr_not_found_p23:
+  mov QWORD PTR [rsi], 0
+  mov QWORD PTR [rdx], -1
+  mov eax, -16
+
+.ret_block_p23:
   ret
 
