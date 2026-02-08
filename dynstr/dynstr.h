@@ -26,6 +26,7 @@ typedef enum {
   KMP_RES_INVALID,
   SUBSTR_NOT_FOUND,
   CHAR_NOT_FOUND,
+  INVALID_KMP_OBJ,
 } DynStrStatus;
 
 // Dynamic string struct

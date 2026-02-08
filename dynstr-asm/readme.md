@@ -304,3 +304,19 @@ From now, the commit history will speak as the changes are many and I can't acco
 ***10:09 PM***
 
 I am done for the day. I am stuck at getslicedstr. I simply can't comprehend what's wrong here. I need rest now.
+
+# Day 4
+
+***February 08, 2026***
+
+Finally, the mysterious segfault resolves. I don't know why I notes r10 as the 4th argument register. It was rcx. That was the issue.
+
+I've to update this in later parts as well.
+
+---
+
+islcase is working fine but tolcase returned -6, which is for invalid buff, what the heck! OK, a register mismatch in `test`. Now it returns -11, which makes far more sense.
+
+---
+
+Everything sorted, except kmp_search. I've tried some things and I'll continue tomorrow.

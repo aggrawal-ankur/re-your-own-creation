@@ -66,6 +66,7 @@ DynStrStatus getstr(const DynString* str, size_t idx, char** out){
 DynStrStatus getslicedstr(const DynString* str, size_t start, size_t end, char* outstr){
   if (!str || !str->data) return -INIT_FIRST;
   if (start >= str->len || end >= str->len) return -INVALID_RANGE;
+  if (start >= end) return -INVALID_RANGE;
 
   size_t slen = end-start;    // [start, end)
   memcpy(outstr, &str->data[start], slen);
@@ -234,6 +235,7 @@ static inline DynStrStatus kmp_build_lps(const char* pat, size_t plen, size_t *l
 
 DynStrStatus kmp_search(const char* str, const char* pat, kmp_result* kmp_obj){
   if (!str || !pat) return -INVALID_BUFF;
+  if (!kmp_obj) return -INVALID_KMP_OBJ;
 
   size_t slen = lenstr(str);
   size_t plen = lenstr(pat);

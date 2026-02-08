@@ -34,7 +34,7 @@ I'm going to follow System V ABI.
 | Arg 1 | rdi |
 | Arg 2 | rsi |
 | Arg 3 | rdx |
-| Arg 4 | r10 |
+| Arg 4 | rcx |
 | Arg 5 | r8  |
 | Arg 6 | r9  |
 

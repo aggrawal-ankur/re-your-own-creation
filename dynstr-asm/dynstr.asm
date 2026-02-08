@@ -203,6 +203,7 @@ populate:
 #   rsi=ub
 #   rdx=idx
 boundcheck:
+  # No need to realign rsp as nothing is called.
   xor eax, eax
   cmp rdx, rsi
   jae .ret_block_p5
@@ -252,7 +253,7 @@ getstr:
 #   rdi=&str (dynstr)
 #   rsi=start
 #   rdx=end
-#   r10=&outstr (callee allocated buffer)
+#   rcx=&outstr (callee allocated buffer)
 getslicedstr:
   push r13
   push r14
@@ -262,23 +263,25 @@ getslicedstr:
   test rdi, rdi
   jz   .ret_block_p7
 
-  mov  rcx, QWORD PTR [rdi]
-  test rcx, rcx
+  mov  r8, QWORD PTR [rdi]
+  test r8, r8
   jz   .ret_block_p7
 
 # range validation
-  mov rcx, QWORD PTR 8[rdi]
-  cmp rsi, rcx
+  mov r8, QWORD PTR 8[rdi]
+  cmp rsi, r8
   jae .invalid_range_p7
-  cmp rdx, rcx
+  cmp rdx, r8
+  jae .invalid_range_p7
+  cmp rsi, rdx
   jae .invalid_range_p7
 
-# memcpy; preserve rdi and r10 and compute slen in a callee-saved register
+# memcpy; preserve rdi and rcx and compute slen in a callee-saved register
   mov r13, rdi    # &str
-  mov r14, r10    # &outstr
-  mov rcx, rsi    # preserve start
+  mov r14, rcx    # &outstr
+  mov r8, rsi    # preserve start
 
-  # (Arg3 rdx=slen)
+  # Arg3 (rdx=slen)
   sub rdx, rsi    # end-start
   mov r15, rdx    # preserve slen
 
@@ -286,11 +289,11 @@ getslicedstr:
   mov rdi, r14
 
   # Arg2 (rsi=&str->data[start])
-  mov r10, QWORD PTR [r13]    # str->data (base)
-  lea rsi, [r10 + rcx]        # &str->data[start]
+  mov rsi, QWORD PTR [r13]    # str->data (base)
+  lea rsi, [rsi + r8]        # &str->data[start]
 
-  # call memcpy@PLT
-  mov BYTE PTR [r14 + r15], 0
+  call memcpy@PLT
+  mov  BYTE PTR [r14 + r15], 0
 
   xor eax, eax
   jmp .ret_block_p7
@@ -327,20 +330,20 @@ copystr:
   add rbx, 1
   jmp .len_p8
 
-# memcpy; preserve rdi
-  mov r14, rdi
-
-  mov   rdi, rsi
-  mov   rsi, r14
-  mov rdx, rbx
-  call  memcpy@PLT
-
-  xor eax, eax
-  jmp .ret_block_p8
-
 .done_p8:
   test rbx, rbx
   jz   .invalid_buff_p8
+
+# memcpy; preserve rdi
+  mov r14, rdi
+
+  mov  rdi, rsi
+  mov  rsi, r14
+  mov  rdx, rbx
+  call memcpy@PLT
+
+  xor eax, eax
+  jmp .ret_block_p8
 
 .invalid_buff_p8:
   mov eax, -6
@@ -397,19 +400,20 @@ islcase:
   test rdi, rdi
   jz   .invalid_buff_p11
 
-  mov eax, -9
-  xor rcx, rcx    # SUCCESS hoisted
+  mov eax, -9     # failure hoisted
+  xor rcx, rcx    # iterator
 
 .check_loop_p11:
   mov dl, BYTE PTR [rdi + rcx]
   cmp dl, 0
   jz  .done_p11
 
-  cmp dl, 65
-  jb  .ret_block_p11
   cmp dl, 90
-  ja  .ret_block_p11
+  ja  .inc_p11
+  cmp dl, 65
+  jae .ret_block_p11
 
+.inc_p11:
   add rcx, 1
   jmp .check_loop_p11
 
@@ -437,8 +441,8 @@ isucase:
   test rdi, rdi
   jz   .invalid_buff_p12
 
-  mov eax, -9
-  xor rcx, rcx    # SUCCESS hoisted
+  mov eax, -9     # failure hoisted
+  xor rcx, rcx    # iterator
 
 .check_loop_p12:
   mov dl, BYTE PTR [rdi + rcx]
@@ -446,10 +450,11 @@ isucase:
   jz  .done_p12
 
   cmp dl, 97
-  jb  .ret_block_p12
+  jb  .inc_p12
   cmp dl, 122
-  ja  .ret_block_p12
+  jbe .ret_block_p12
 
+.inc_p12:
   add rcx, 1
   jmp .check_loop_p12
 
@@ -486,10 +491,7 @@ tolcase:
 # preserve rsi only as rdi is no longer used after this.
   mov rbx, rsi
 
-  mov rsi, rdi  # Arg2 (rsi=str)
-  mov rdi, rsi  # Arg1 (rdi=lcase)
-
-  # Arg3 (rdx=bytes) need to be calculated
+  # Arg3 (rdx=bytes) needs to be calculated
   xor r13, r13
 .len_p13:
   cmp BYTE PTR [rdi + r13], 0
@@ -499,17 +501,19 @@ tolcase:
   jmp .len_p13
 
 .done_p13:
-  test r13, r14
+  test r13, r13
   jz   .invalid_buff_p13
 
-  mov rdx, r13    # Arg3 (rdx=r13=bytes)
+  mov rsi, rdi  # Arg2 (rsi=str)
+  mov rdi, rbx  # Arg1 (rdi=lcase)
+  mov rdx, r13  # Arg3 (rdx=r13=bytes)
   call memcpy@PLT
   mov BYTE PTR [rbx + r13], 0
-  
+
 # Loop over each character and run char2lcase on it.
-  xor rax, rax    # iterator
+  xor rcx, rcx    # iterator
 .convert2lcase_p13:
-  mov dl, BYTE PTR [rbx + rax]
+  mov dl, BYTE PTR [rbx + rcx]
   cmp dl, 0
   jz  .check_lcase_p13
 
@@ -519,26 +523,26 @@ tolcase:
   cmp dl, 90
   ja .end_p13    # Not uppercase, do nothing.
 
-  or dl, 0x20     # Uppercase confirmed, convert.
-  mov BYTE PTR [rbx + rax], dl    # lcase[i] = char2lcase(lcase[i])
+  or dl, 0x20    # Uppercase confirmed, convert.
+  mov BYTE PTR [rbx + rcx], dl    # lcase[i] = char2lcase(lcase[i])
 
 .end_p13:
-  add rax, 1
-  jmp .check_lcase_p13
+  add rcx, 1
+  jmp .convert2lcase_p13
 
 # islcase inlined
-  xor eax, eax    # SUCCESS hoisted
   xor rcx, rcx    # iterator
 .check_lcase_p13:
   mov dl, BYTE PTR [rbx + rcx]
   cmp dl, 0
-  jz  .ret_block_p13
+  jz  .success_p13
 
+  cmp dl, 90
+  ja  .inc_p13
   cmp dl, 65
   jae .lcase_failed_p13
-  cmp dl, 90
-  jbe .lcase_failed_p13
 
+.inc_p13:
   add rcx, 1
   jmp .check_lcase_p13
 
@@ -548,6 +552,10 @@ tolcase:
 
 .lcase_failed_p13:
   mov eax, -11
+  jmp .ret_block_p13
+
+.success_p13:
+  xor eax, eax
 
 .ret_block_p13:
   add rsp, 8
@@ -574,13 +582,10 @@ toucase:
 # preserve rsi as rdi is not used after.
   mov rbx, rsi
 
-  mov rsi, rdi  # Arg2 (rsi=str)
-  mov rdi, rsi  # Arg1 (rdi=ucase)
-
   # Arg3 (rdx=bytes) needs calculation
   xor r13, r13
 .len_p14:
-  cmp BYTE PTR [rbx + r13], 0
+  cmp BYTE PTR [rdi + r13], 0
   jz  .done_p14
 
   add r13, 1
@@ -590,7 +595,9 @@ toucase:
   test r13, r13
   jz   .invalid_buff_p14
 
-  mov  rdx, r13  # Arg3 (rdx=bytes)
+  mov rsi, rdi  # Arg2 (rsi=str)
+  mov rdi, rbx  # Arg1 (rdi=ucase)
+  mov rdx, r13  # Arg3 (rdx=bytes)
   call memcpy@PLT
   mov BYTE PTR [rbx + r13], 0
 
@@ -615,18 +622,18 @@ toucase:
   jmp .convert2ucase_p14
 
 # isucase inlined
-  xor eax, eax    # SUCCESS hoisted
   xor rcx, rcx    # iterator
 .check_ucase_p14:
   mov dl, BYTE PTR [rbx + rcx]
   cmp dl, 0
-  jz  .ret_block_p14
+  jz  .success_p14
 
   cmp dl, 97
-  jae .ucase_failed_p14
+  jb  .inc_p14
   cmp dl, 122
   jbe .ucase_failed_p14
 
+.inc_p14:
   add rcx, 1
   jmp .check_ucase_p14
 
@@ -636,6 +643,10 @@ toucase:
 
 .ucase_failed_p14:
   mov eax, -12
+  jmp .ret_block_p14
+
+.success_p14:
+  xor eax, eax
 
 .ret_block_p14:
   add rsp, 8
@@ -650,11 +661,10 @@ toucase:
 # Function Parameters
 #   rdi=str1 (const dynstr*)
 #   rsi=str2 (const dynstr*)
-#   rdx=sensitivity (int)
+#   edx=sensitivity (int)
 cmp2strs:
   push r13
 
-  xor  eax, eax
   test rdi, rdi
   jz   .ret_block_p15_1
 
@@ -669,10 +679,13 @@ cmp2strs:
   test rcx, rcx
   jz   .ret_block_p15_1
 
-  mov  rcx, QWORD PTR 8[rdi]
-  mov  r10, QWORD PTR 8[rsi]
-  test rcx, r10
-  jnz  .strs_not_eq_p15_1
+  mov rcx, QWORD PTR 8[rdi]
+  mov r10, QWORD PTR 8[rsi]
+  cmp rcx, r10
+  jnz .strs_not_eq_p15_1
+
+  test edx, edx
+  jnz  .case_insensitive_check
 
 # Case sensitive (0)
   mov  rdx, QWORD PTR 8[rdi]    # Arg3 (rdx=str1->len)
@@ -685,25 +698,31 @@ cmp2strs:
   xor eax, eax
   jmp .ret_block_p15_1
 
+.case_insensitive_check:
 # Case insensitive (1)
   # Since pushing registers is only required in case of insensitive check.
   # But for alignment purpose, we need to push one register at least, so only two registers are being pushed here.
+  push r12    # preserve the space subtracted for VLA
   push r14    # tmp1[str1->len+1]
   push r15    # tmp2[str2->len+1]
   push rbp    # str1
   push rbx    # str2
+  sub  rsp, 8
   mov  rbp, rdi
   mov  rbx, rsi
 
   # VLA aligned-space calculation
   add rcx, r10    # total bytes required: (rcx, r10)
+
   add rcx, 2      # count for '\0'
   add rcx, 15     # (total + 15)
   and rcx, -16    # (total + 15) & ~15
+  mov r12, rcx    # preserve VLA space count
   sub rsp, rcx
 
   mov r14, rsp                # &tmp1[str1->len+1]
   lea r15, [rsp + r10 + 1]    # &tmp2[str2->len+1]
+  # For these reasons, some arrays allow appending out of bounds because they end up using the "alignment space"
 
 # tolcase calls
   mov  rdi, QWORD PTR [rbp]    # Arg1 (rdi=str1->data)
@@ -721,7 +740,7 @@ cmp2strs:
 # memcmp
   mov  rdi, r14
   mov  rsi, r15
-  mov  rdx, 8[rbp]
+  mov  rdx, QWORD PTR 8[rbp]
   call memcmp@PLT
   test rax, rax
   jnz  .strs_not_eq_p15_2
@@ -744,10 +763,13 @@ cmp2strs:
   mov eax, -14
 
 .ret_block_p15_2:
+  add rsp, r12
+  add rsp, 8
   pop rbx
   pop rbp
   pop r15
   pop r14
+  pop r12
   pop r13
   ret
 
@@ -759,13 +781,16 @@ cmp2strs:
 #   rdi=str (const char*)
 #   sil=c   (char to find)
 #   edx=sensitivity
-#   r10=&count (out_ptr, int*)
+#   rcx=&count (out_ptr, int*)
 findchar:
+  push rbx
+  xor ebx, ebx    # count
+
   test rdi, rdi
   jz   .invalid_buff_p16
 
-  push rbx    # count
-  xor  ebx, ebx
+  test edx, edx
+  jz   .sensitive_loop_p16
 
 # Case insensitive (1)
   # Hoist char2lcase(c) outside in r8b
@@ -779,36 +804,36 @@ findchar:
   or r8b, 0x20
 
   # loop over each character; char2lcase inlined
-  xor rax, rax    # iterator
+  xor r10, r10    # iterator
 .insensitive_loop_p16:
-  mov cl, BYTE PTR [rdi + rax]
-  cmp cl, 0
+  mov dl, BYTE PTR [rdi + r10]
+  cmp dl, 0
   jz  .done_p16
 
-  cmp cl, 65
+  cmp dl, 65
   jb  .check_p16
-  cmp cl, 90
+  cmp dl, 90
   ja  .check_p16
 
-  or cl, 0x20
+  or dl, 0x20
 
 .check_p16:
-  add eax, 1    # i++
-  cmp cl, r8b
+  add r10, 1    # i++
+  cmp dl, r8b
   jne .insensitive_loop_p16
 
   add ebx, 1    # occ++
   jmp .insensitive_loop_p16
 
 # Case sensitive (0)
-  xor rax, rax
+  xor r10, r10
 .sensitive_loop_p16:
-  mov cl, BYTE PTR [rdi + rax]
-  cmp cl, 0
+  mov dl, BYTE PTR [rdi + r10]
+  cmp dl, 0
   jz  .done_p16
 
-  add eax, 1    # i++
-  cmp cl, sil
+  add r10, 1    # i++
+  cmp dl, sil
   jne .sensitive_loop_p16
 
   add ebx, 1    # occ++
@@ -818,7 +843,8 @@ findchar:
   test ebx, ebx
   jz   .not_found_p16
 
-  mov DWORD PTR [r10], ebx
+  mov DWORD PTR [rcx], ebx
+  xor eax, eax
   jmp .ret_block_p16
 
 .invalid_buff_p16:
@@ -947,13 +973,18 @@ kmp_search:
   push r14    # VLA *lps
   push r15    # str (rdi)
   push rbp    # pat (rsi)
-  push rbx    # kmp_obj (rdx)
+  push rbx    # rsp
+  sub rsp, 8  # Dummy
 
   test rdi, rdi
   jz   .invalid_buff_p20
 
   test rsi, rsi
   jz   .invalid_buff_p20
+
+  test rdx, rdx
+  jz   .invalid_kmp_obj
+  mov QWORD PTR 16[rsp], rdx    # preserve &kmp_obj
 
   xor r12, r12    # slen
   xor r13, r13    # plen
@@ -985,16 +1016,23 @@ kmp_search:
   jae .invalid_buff_p20
 
 # VLA allocation (size_t lps[plen])
-  mov rcx, r13
-  add rcx, 15     # req + 15
-  and rcx, -16    # (req + 15) & ~15
+  mov rcx, r13    # plen
+  add rcx, 15     # plen + 15
+  and rcx, -16    # (plen + 15) & ~15
   sub rsp, rcx
   mov r14, rsp    # size_t lps[plen]
+
+# Stack spill
+  sub rsp, 8    # kmp_obj (rdx) || 8[rsp]
+  sub rsp, 8    # VLA size      ||  [rsp]
+  mov rbx, rsp
+
+  mov QWORD PTR  [rbx], rcx    # VLA size preserved on stack
+  mov QWORD PTR 8[rbx], rdx    # &kmp_obj
 
 # kmp_build_lps; preserve rdi, rsi and rdx
   mov r15, rdi
   mov rbp, rsi
-  mov rbx, rdx
 
   mov  rdi, rbp    # Arg1 (rdi=pat)
   mov  rsi, r13    # Arg2 (rsi=plen)
@@ -1008,6 +1046,9 @@ kmp_search:
   xor rsi, rsi    # k=0
   xor rdx, rdx    # count=0
 
+  # Hoist the base (kmp_obj->indices) outside
+  mov r9, QWORD PTR 8[rbx]    # kmp_obj
+  mov r9, QWORD PTR 8[r9]     # kmp_obj->indices
 .while_p20:
   cmp rdi, r12    # i < slen
   jae .check_count_p20
@@ -1023,44 +1064,57 @@ kmp_search:
   cmp rsi, r13    # (k == plen)
   jne .while_p20
 
-  mov r9, QWORD PTR 8[rbx]    # kmp_obj->indices
-  mov rax, rdi
+  mov rax, rdi    # i
   sub rax, rsi    # (i-k)
-  mov QWORD PTR [r9 + rdx], rax    # kmp_obj->indices[count]=(i-k)
+  mov QWORD PTR [r9 + rdx*8], rax    # kmp_obj->indices[count]=(i-k)
 
   add rdx, 1    # count++
-  mov rsi, [r14 + r13 - 1]    # k = lps[plen-1]
+  mov rsi, QWORD PTR [r14 + (r13-1)*8]    # k = lps[plen-1]
   jmp .while_p20
 
 .elseif_p20:
   test rsi, rsi
   jz   .else_p20
 
-  mov rsi, QWORD PTR [r14 + rsi - 1]    # k = lps[k-1]
+  mov rsi, QWORD PTR [r14 + (rsi-1)*8]    # k = lps[k-1]
   jmp .while_p20
 
 .else_p20:
-  add rdi, 1
+  add rdi, 1    # i++
   jmp .while_p20
 
 .check_count_p20:
   test rdx, rdx
   jnz  .set_count_p20
 
-  mov QWORD PTR  [rbx], 0
-  mov QWORD PTR 8[rbx], 0
+  mov r9, QWORD PTR 8[rbx]
+  mov QWORD PTR  [r9], 0
+  mov QWORD PTR 8[r9], 0
+
   mov eax, -16    # SUBSTR_NOT_FOUND
   jmp .ret_block_p20
 
 .set_count_p20:
-  mov QWORD PTR [rbx], rdx    # kmp_obj->count = count (rdx)
+  mov r9, QWORD PTR 8[rbx]
+  mov QWORD PTR [r9], rdx    # kmp_obj->count = count (rdx)
+
   xor eax, eax    # SUCCESS
   jmp .ret_block_p20
 
 .invalid_buff_p20:
   mov eax, -6
+  jmp .ret_block_p20
+
+.invalid_kmp_obj:
+  mov eax, -18
+  jmp .ret_block_p20
 
 .ret_block_p20:
+  mov rsp, rbx
+  mov r10, QWORD PTR [rsp]
+  add rsp, 16
+  add rsp, r10
+  add rsp, 8
   pop rbx
   pop rbp
   pop r15

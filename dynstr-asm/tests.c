@@ -41,9 +41,9 @@ int main(void){
   printf("Running tolcase(also copystr internally)....\n");
   char lcase[100];
   res = tolcase(str1.data, lcase);
-  printf("  res: %d\n", res);
+  printf("  res (tolcase): %d\n", res);
   res = islcase(lcase);
-  printf("  res: %d\n", res);
+  printf("  res (islcase): %d\n", res);
   printf("Org: %s", str1.data);
   printf("lcase: %s", lcase);
   printf("\n\n");
@@ -56,9 +56,9 @@ int main(void){
   printf("Running toucase(also copystr internally)....\n");
   char ucase[100];
   res = toucase(str1.data, ucase);
-  printf("  res: %d\n", res);
+  printf("  res (toucase): %d\n", res);
   res = isucase(ucase);
-  printf("  res: %d\n", res);
+  printf("  res (isucase): %d\n", res);
   printf("Org: %s", str1.data);
   printf("ucase: %s", ucase);
   printf("\n\n");
@@ -67,22 +67,30 @@ int main(void){
   DynString str2 = {0};
   init(&str2, 50);
   populate(&str2, "My name iS anna!\n");
+  printf("  ptr1: %s", str1.data);
+  printf("  ptr2: %s", str2.data);
   res = cmp2strs(&str1, &str2, 0);
   printf("  res: %d\n", res);
+  printf("\n\n");
 
   printf("Running cmp2strs() in insensitive mode....\n");
   DynString str3 = {0};
   init(&str3, 50);
   populate(&str3, "My name iS anna!\n");
+  printf("  ptr1: %s", str1.data);
+  printf("  ptr3: %s", str3.data);
   res = cmp2strs(&str1, &str3, 1);
   printf("  res: %d\n", res);
   printf("\n\n");
 
-  printf("Running findchar()....\n");
+  printf("Running findchar(sensitive)....\n");
   int count;
+  count=-1;
   res = findchar(str1.data, 'm', 0, &count);
   printf("  res: %d\n", res);
   printf("  total occurrence of 'm' in sensitive mode: %d\n", count);
+  count=-1;
+  printf("Running findchar(insensitive)....\n");
   res = findchar(str1.data, 'm', 1, &count);
   printf("  res: %d\n", res);
   printf("  total occurrence of 'm' in insensitive mode: %d\n", count);
