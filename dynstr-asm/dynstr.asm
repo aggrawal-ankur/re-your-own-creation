@@ -225,16 +225,16 @@ getstr:
   test rdi, rdi
   jz   .ret_block_p6
 
-  mov rcx, QWORD PTR [rdi]
+  mov  rcx, QWORD PTR [rdi]
+  test rcx, rcx
   jz  .ret_block_p6
 
 # boundcheck inlined;
   cmp rsi, QWORD PTR 8[rdi]
   jae .invalid_idx_p6
 
-  # I am not sure about this!
-  lea rcx, [rcx + rsi]        # *out = &str->data[idx]
-  mov QWORD PTR [rdx], rcx    # *out
+  add rcx, rsi    # rcx already had the base, just add the offset (idx)
+  mov QWORD PTR [rdx], rcx    # *out = &str->data[idx]
 
   xor eax, eax
   jmp .ret_block_p6
@@ -255,9 +255,9 @@ getstr:
 #   rdx=end
 #   rcx=&outstr (callee allocated buffer)
 getslicedstr:
-  push r13
   push r14
   push r15
+  sub  rsp, 8
 
   mov  eax, -4
   test rdi, rdi
@@ -268,18 +268,15 @@ getslicedstr:
   jz   .ret_block_p7
 
 # range validation
-  mov r8, QWORD PTR 8[rdi]
-  cmp rsi, r8
+  cmp rsi, rdx                  # start >= end
   jae .invalid_range_p7
-  cmp rdx, r8
-  jae .invalid_range_p7
-  cmp rsi, rdx
+  cmp rdx, QWORD PTR 8[rdi]     # end >= len
   jae .invalid_range_p7
 
 # memcpy; preserve rdi and rcx and compute slen in a callee-saved register
-  mov r13, rdi    # &str
+  mov r11, rdi    # &str
   mov r14, rcx    # &outstr
-  mov r8, rsi    # preserve start
+  mov r10, rsi    # preserve start
 
   # Arg3 (rdx=slen)
   sub rdx, rsi    # end-start
@@ -289,8 +286,8 @@ getslicedstr:
   mov rdi, r14
 
   # Arg2 (rsi=&str->data[start])
-  mov rsi, QWORD PTR [r13]    # str->data (base)
-  lea rsi, [rsi + r8]        # &str->data[start]
+  mov rsi, QWORD PTR [r11]    # str->data (base)
+  lea rsi, [rsi + r10]        # &str->data[start]
 
   call memcpy@PLT
   mov  BYTE PTR [r14 + r15], 0
@@ -302,7 +299,7 @@ getslicedstr:
   mov eax, -8
 
 .ret_block_p7:
-  pop r15
+  add rsp, 8
   pop r14
   pop r13
   ret

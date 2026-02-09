@@ -372,6 +372,8 @@ At -O1, the frame pointer (rbp) is mostly omitted under `-fpo`. However, callee-
   - When a procedure has a complex control flow, for the sake of **stable anchors and a predictable layout**, the compiler can honor push/sub in the prologue itself.
   - These are the cases when multiple return paths emerge.
 
+***If you see conditional register saves, you know there are distinct execution paths with different resource requirements.***
+
 Example:
   - In dynstr.asm, the procedure cmp2strs has two paths because of case sensitive and insensitive check. In my version, I've implemented two separate paths because the case sensitive one requires no callee-saved register and the sensitive one requires 6 registers and a dummy push of 8-bytes on stack. The only reason I push r13 earlier is to align rsp to a 16-byte boundary in case the case-insensitive path is taken. This design is taken from GCC's output for dynarr.asm at -O1 probably. GCC doesn't implementation this in dynstr.asm however, so yeah.
 
@@ -413,8 +415,8 @@ The presence of
   - `BYTE PTR` means an 8-bit value.
 
 Obviously it is not precise, but it helps in reducing the search space. Like:
-  - `QWORD PTR` can mean a pointer or a size_t value, anything 64-bit, basically.
-  - `DWORD PTR` can mean an integer in huge cases.
+  - `QWORD PTR` with arithmetic can mean "pointer arithmetic" or a "size_t" value.
+  - `DWORD PTR` is a huge sign for ints.
   - I've not come across any use of `WORD PTR` so far.
   - `BYTE PTR` is best for ASCII-character stuff. But remember, uint_8t is the same thing.
 
@@ -430,8 +432,9 @@ Conditional jumps are another helping hand to confirm whether we are operating o
 
 ***To confirm the presence of "arrays", look for offset calculation.***
 
-Standard character buffers have a signature of: `[base + offset]`, which can be confused with layout traversal as well, like traveling offset bytes from a pointer.
-
-But arrays of types with size greater than 1 undergo a different calculation for the offset value. That's the signature: `[base + index*scale]`, and it matches exactly with: `*(arr + i*sizeof(type))`.
+The general formula is:
+```
+[base + index*scale] where scale ∈ {1,2,4,8}
+```
 
 ---
