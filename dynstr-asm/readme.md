@@ -437,4 +437,8 @@ The general formula is:
 [base + index*scale] where scale ∈ {1,2,4,8}
 ```
 
----
+# Conclusion
+
+I am concluding this journey today. I am not feeling like optimizing this one. It is just about which tradeoffs I am accepting to have. Hopping from one form of expression to the another.
+
+I don't know what's going to be the next thing. I am waiting for the universe's signal to be processed by my subconscious mind. Thank you.
