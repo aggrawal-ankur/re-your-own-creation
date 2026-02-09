@@ -320,3 +320,118 @@ islcase is working fine but tolcase returned -6, which is for invalid buff, what
 ---
 
 Everything sorted, except kmp_search. I've tried some things and I'll continue tomorrow.
+
+# Day 5
+
+***February 09, 2026  5:30 PM***
+
+I am done correcting dynstr.asm and it works perfect now. The bus error in kmp_search was really frustrating. I tried many changes but nothing seemed to work. In the end, kmp_build_lps missed the scale factor multiplication in offset calculation, that disturbed everything downstream.
+
+Today I woke up with pain in the lower back, which is kind of disturbing, honestly. But I know that it will vanish because now dynstr.asm is working fine.
+
+I have drawn an ASCII-art after a long time to help me get the layout correctly.
+```
+rsp -> 2000 (%16 == 0)
+*----------*
+| ret_addr | -> 1992
+*----------*
+|   r12    | -> 1984
+*----------*
+|   r13    | -> 1976
+*----------*
+|   r14    | -> 1968
+*----------*
+|   r15    | -> 1960
+*----------*
+|   rbp    | -> 1952
+*----------*
+|   rbx    | -> 1944
+*----------*
+|   rsp-8  | -> 1936 (dummy push)
+*----------*
+|  VLA(4)  | -> 1904 (A VLA of 4 size_t sized elements for predictable layout)
+*----------*
+|   rsp-8  | -> 1896 (&kmp_obj, i.e rdx)
+*----------*
+|   rsp-8  | -> 1888 (VLA Size (32), i.e rcx)
+*----------*
+```
+
+I've an idea to conclude my findings so far, before I move on to optimizing dynstr.asm, wherever possible.
+
+# Stuff to look for?
+
+***How the prologue is structured?***
+
+At -O0, callee-saved registers and stack reservation is done in the prologue itself and the body is completely separate.
+
+At -O1, the frame pointer (rbp) is mostly omitted under `-fpo`. However, callee-saved register pushing and stack space reservation has a different story.
+  - Sometimes, the prologue has meaning, where push/sub are separated from the body. Other times, the prologue is basically meaningless, unless you change your definition of it.
+  - Either push/sub can be restricted to the prologue, or they leak into the body. Both designs indicate some things, but the interpretation is not guaranteed to be true 100%.
+  - When a procedure has a complex-enough control flow that can lead to different paths but is simple enough to be optimized, the compiler chooses to segregate push/sub based on which path requires how much of them, to optimize memory footprint.
+  - When a procedure has a complex control flow, for the sake of **stable anchors and a predictable layout**, the compiler can honor push/sub in the prologue itself.
+  - These are the cases when multiple return paths emerge.
+
+Example:
+  - In dynstr.asm, the procedure cmp2strs has two paths because of case sensitive and insensitive check. In my version, I've implemented two separate paths because the case sensitive one requires no callee-saved register and the sensitive one requires 6 registers and a dummy push of 8-bytes on stack. The only reason I push r13 earlier is to align rsp to a 16-byte boundary in case the case-insensitive path is taken. This design is taken from GCC's output for dynarr.asm at -O1 probably. GCC doesn't implementation this in dynstr.asm however, so yeah.
+
+The prologue speaks a lot about the register pressure.
+
+---
+
+***How many callee-saved registers the compiler is pushing?*** It indicates:
+  - how much data needs preservation across sub-calls in the procedure.
+  - the register pressure and how complicated data movement is across the procedures.
+
+The higher the number, the more complex data movement is, the more data needs preservation across sub-calls and the more registers are under pressure.
+
+When all the callee-saved registers are pushed on stack, yet you need stack space (for spills), that's a sign of sufficiently great register pressure.
+
+---
+
+***Instruction reordering in complex control flow.***
+  - Procedures with complex control flow logic involves stuff which can be silently reordered by the compiler not just for profitability, but logically as well.
+
+---
+
+***A lot of optimization techniques are completely applicable yet the compiler might not emit them for reasons hard to find and verify, if found any.***
+
+Take the output of GCC for dynstr.c at -O1 for example. Most of the procedures have frame pointer while it is neglected at -O1 by the compiler under `-fpo`. I myself have written whole dynstr.asm without any base-pointer.
+
+I am not saying mine is better than GCC's, but the question is **why didn't GCC omitted the frame pointer?** These aren't unanswerable questions obviously, but they demand great understanding of compilers, and I don't have it yet.
+
+A lot of reasons can be economical and based on prioritizing profitability over logical reasoning.
+
+---
+
+***Type-information is largely lost, but not completely.***
+
+The presence of
+  - `QWORD PTR` means a 64-bit value,
+  - `DWORD PTR` means a 32-bit value,
+  - `WORD PTR` means a 16-bit value,
+  - `BYTE PTR` means an 8-bit value.
+
+Obviously it is not precise, but it helps in reducing the search space. Like:
+  - `QWORD PTR` can mean a pointer or a size_t value, anything 64-bit, basically.
+  - `DWORD PTR` can mean an integer in huge cases.
+  - I've not come across any use of `WORD PTR` so far.
+  - `BYTE PTR` is best for ASCII-character stuff. But remember, uint_8t is the same thing.
+
+The presence of `movsx` confirms signed-ness. 
+
+The presence of `movzx` can be quite-interesting. It indicates that a value from a small container needs to be zero-extended and moved into a larger container. This doesn't preserve signed-ness, and if the original source, which is getting zero-extended, was a signed container and had a signed value, that can infest as a problem in the later parts of the code.
+
+Conditional jumps are another helping hand to confirm whether we are operating on signed-containers or unsigned-containers. Like we jl and jb for `<`, but jl is for signed values and jb is for unsigned values.
+
+***Signed-ness is not a property of data. It’s a property of interpretation at use sites. Therefore, I believe more mechanisms exist to confirm signed-ness and they'll reveal as I progress.***
+
+---
+
+***To confirm the presence of "arrays", look for offset calculation.***
+
+Standard character buffers have a signature of: `[base + offset]`, which can be confused with layout traversal as well, like traveling offset bytes from a pointer.
+
+But arrays of types with size greater than 1 undergo a different calculation for the offset value. That's the signature: `[base + index*scale]`, and it matches exactly with: `*(arr + i*sizeof(type))`.
+
+---
