@@ -940,7 +940,7 @@ kmp_build_lps:
   jnz .elseif_p19
 
   add rcx, 1    # len++
-  mov QWORD PTR [rdx + r10], rcx    # lps[i] = len
+  mov QWORD PTR [rdx + r10*8], rcx    # lps[i] = len
   add r10, 1    # i++
   jmp .loop_p19
 
@@ -948,11 +948,11 @@ kmp_build_lps:
   cmp rcx, 0
   jz  .else_p19
 
-  mov rcx, QWORD PTR [rdx + rcx - 1]    # len = lps[len-1]
+  mov rcx, QWORD PTR [rdx + rcx*8 - 8]    # len = lps[len-1]
   jmp .loop_p19
 
 .else_p19:
-  mov QWORD PTR [rdx + r10], 0    # lps[i]=0
+  mov QWORD PTR [rdx + r10*8], 0    # lps[i]=0
   add r10, 1    # i++
   jmp .loop_p19
 
@@ -984,7 +984,6 @@ kmp_search:
 
   test rdx, rdx
   jz   .invalid_kmp_obj
-  mov QWORD PTR 16[rsp], rdx    # preserve &kmp_obj
 
   xor r12, r12    # slen
   xor r13, r13    # plen
@@ -1017,18 +1016,20 @@ kmp_search:
 
 # VLA allocation (size_t lps[plen])
   mov rcx, r13    # plen
-  add rcx, 15     # plen + 15
-  and rcx, -16    # (plen + 15) & ~15
+  shl rcx, 3      # plen * sizeof(size_t) as lps is a size_t array
+  add rcx, 15     # total + 15
+  and rcx, -16    # (total + 15) & ~15
   sub rsp, rcx
   mov r14, rsp    # size_t lps[plen]
 
 # Stack spill
   sub rsp, 8    # kmp_obj (rdx) || 8[rsp]
-  sub rsp, 8    # VLA size      ||  [rsp]
-  mov rbx, rsp
+  mov QWORD PTR [rsp], rdx    # &kmp_obj
 
-  mov QWORD PTR  [rbx], rcx    # VLA size preserved on stack
-  mov QWORD PTR 8[rbx], rdx    # &kmp_obj
+  sub rsp, 8    # VLA size      ||  [rsp]
+  mov QWORD PTR [rsp], rcx    # VLA size preserved on stack
+
+  mov rbx, rsp    # preserve rsp (top) in rbx for accessing stack
 
 # kmp_build_lps; preserve rdi, rsi and rdx
   mov r15, rdi
@@ -1039,7 +1040,7 @@ kmp_search:
   mov  rdx, r14    # Arg3 (rdx=lps)
   call kmp_build_lps
   test eax, eax
-  jnz  .ret_block_p20
+  jnz  .ret_block_p20_2
 
 # while loop
   xor rdi, rdi    # i=0
@@ -1047,15 +1048,17 @@ kmp_search:
   xor rdx, rdx    # count=0
 
   # Hoist the base (kmp_obj->indices) outside
-  mov r9, QWORD PTR 8[rbx]    # kmp_obj
+  mov r9, QWORD PTR 8[rbx]    # &kmp_obj
   mov r9, QWORD PTR 8[r9]     # kmp_obj->indices
+
 .while_p20:
   cmp rdi, r12    # i < slen
   jae .check_count_p20
 
-  mov cl, BYTE PTR [r15 + rdi]    # str[i]
-  mov al, BYTE PTR [rbp + rsi]    # pat[k]
-  cmp cl, al
+  mov r8b,  BYTE PTR [r15 + rdi]    # str[i]
+  mov r11b, BYTE PTR [rbp + rsi]    # pat[k]
+  cmp r8b, r11b
+
   jne .elseif_p20
 
   add rdi, 1    # i++
@@ -1069,14 +1072,17 @@ kmp_search:
   mov QWORD PTR [r9 + rdx*8], rax    # kmp_obj->indices[count]=(i-k)
 
   add rdx, 1    # count++
-  mov rsi, QWORD PTR [r14 + (r13-1)*8]    # k = lps[plen-1]
+  lea rax, [r13-1]
+
+  mov rsi, QWORD PTR [r14 + rax*8]    # k = lps[plen-1]
   jmp .while_p20
 
 .elseif_p20:
   test rsi, rsi
   jz   .else_p20
 
-  mov rsi, QWORD PTR [r14 + (rsi-1)*8]    # k = lps[k-1]
+  lea rax, [rsi-1]    # k-1
+  mov rsi, QWORD PTR [r14 + rax*8]    # k = lps[k-1]
   jmp .while_p20
 
 .else_p20:
@@ -1092,27 +1098,38 @@ kmp_search:
   mov QWORD PTR 8[r9], 0
 
   mov eax, -16    # SUBSTR_NOT_FOUND
-  jmp .ret_block_p20
+  jmp .ret_block_p20_2
 
 .set_count_p20:
   mov r9, QWORD PTR 8[rbx]
   mov QWORD PTR [r9], rdx    # kmp_obj->count = count (rdx)
 
   xor eax, eax    # SUCCESS
-  jmp .ret_block_p20
+  jmp .ret_block_p20_2
 
 .invalid_buff_p20:
   mov eax, -6
-  jmp .ret_block_p20
+  jmp .ret_block_p20_1
 
 .invalid_kmp_obj:
   mov eax, -18
-  jmp .ret_block_p20
+  jmp .ret_block_p20_1
 
-.ret_block_p20:
+.ret_block_p20_1:
+  add rsp, 8
+  pop rbx
+  pop rbp
+  pop r15
+  pop r14
+  pop r13
+  pop r12
+  ret
+
+.ret_block_p20_2:
   mov rsp, rbx
   mov r10, QWORD PTR [rsp]
-  add rsp, 16
+  add rsp, 8
+  add rsp, 8
   add rsp, r10
   add rsp, 8
   pop rbx
@@ -1163,8 +1180,8 @@ firstOccurrence:
   cmp QWORD PTR 8[rdi], 0
   jz  .substr_not_found_p22
 
-  mov rcx, QWORD PTR 8[rdi]
-  mov rcx, QWORD PTR  [rcx]
+  mov rcx, QWORD PTR 8[rdi]    # base
+  mov rcx, QWORD PTR  [rcx]    # indices[0]
   mov QWORD PTR [rsi], rcx     # *idx = kmp_res->indices[0]
 
   xor eax, eax
