@@ -1,0 +1,93 @@
+
+/usr/lib/gcc/x86_64-linux-gnu/14/../../../x86_64-linux-gnu/Scrt1.o:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000000000 <_start>:
+   0:	31 ed                	xor    ebp,ebp
+   2:	49 89 d1             	mov    r9,rdx
+   5:	5e                   	pop    rsi
+   6:	48 89 e2             	mov    rdx,rsp
+   9:	48 83 e4 f0          	and    rsp,0xfffffffffffffff0
+   d:	50                   	push   rax
+   e:	54                   	push   rsp
+   f:	45 31 c0             	xor    r8d,r8d
+  12:	31 c9                	xor    ecx,ecx
+  14:	48 8b 3d 00 00 00 00 	mov    rdi,QWORD PTR [rip+0x0]        # 1b <_start+0x1b>
+  1b:	ff 15 00 00 00 00    	call   QWORD PTR [rip+0x0]        # 21 <_start+0x21>
+  21:	f4                   	hlt
+
+Disassembly of section .rodata.cst4:
+
+0000000000000000 <_IO_stdin_used>:
+   0:	01 00                	add    DWORD PTR [rax],eax
+   2:	02 00                	add    al,BYTE PTR [rax]
+
+Disassembly of section .eh_frame:
+
+0000000000000000 <.eh_frame>:
+   0:	14 00                	adc    al,0x0
+   2:	00 00                	add    BYTE PTR [rax],al
+   4:	00 00                	add    BYTE PTR [rax],al
+   6:	00 00                	add    BYTE PTR [rax],al
+   8:	01 7a 52             	add    DWORD PTR [rdx+0x52],edi
+   b:	00 01                	add    BYTE PTR [rcx],al
+   d:	78 10                	js     1f <.eh_frame+0x1f>
+   f:	01 1b                	add    DWORD PTR [rbx],ebx
+  11:	0c 07                	or     al,0x7
+  13:	08 90 01 07 10 10    	or     BYTE PTR [rax+0x10100701],dl
+  19:	00 00                	add    BYTE PTR [rax],al
+  1b:	00 1c 00             	add    BYTE PTR [rax+rax*1],bl
+  1e:	00 00                	add    BYTE PTR [rax],al
+  20:	00 00                	add    BYTE PTR [rax],al
+  22:	00 00                	add    BYTE PTR [rax],al
+  24:	22 00                	and    al,BYTE PTR [rax]
+  26:	00 00                	add    BYTE PTR [rax],al
+  28:	00 00                	add    BYTE PTR [rax],al
+	...
+
+Disassembly of section .note.gnu.property:
+
+0000000000000000 <.note.gnu.property>:
+   0:	04 00                	add    al,0x0
+   2:	00 00                	add    BYTE PTR [rax],al
+   4:	10 00                	adc    BYTE PTR [rax],al
+   6:	00 00                	add    BYTE PTR [rax],al
+   8:	05 00 00 00 47       	add    eax,0x47000000
+   d:	4e 55                	rex.WRX push rbp
+   f:	00 02                	add    BYTE PTR [rdx],al
+  11:	80 00 c0             	add    BYTE PTR [rax],0xc0
+  14:	04 00                	add    al,0x0
+  16:	00 00                	add    BYTE PTR [rax],al
+  18:	01 00                	add    DWORD PTR [rax],eax
+  1a:	00 00                	add    BYTE PTR [rax],al
+  1c:	00 00                	add    BYTE PTR [rax],al
+	...
+
+Disassembly of section .note.ABI-tag:
+
+0000000000000020 <__abi_tag>:
+  20:	04 00                	add    al,0x0
+  22:	00 00                	add    BYTE PTR [rax],al
+  24:	10 00                	adc    BYTE PTR [rax],al
+  26:	00 00                	add    BYTE PTR [rax],al
+  28:	01 00                	add    DWORD PTR [rax],eax
+  2a:	00 00                	add    BYTE PTR [rax],al
+  2c:	47                   	rex.RXB
+  2d:	4e 55                	rex.WRX push rbp
+  2f:	00 00                	add    BYTE PTR [rax],al
+  31:	00 00                	add    BYTE PTR [rax],al
+  33:	00 03                	add    BYTE PTR [rbx],al
+  35:	00 00                	add    BYTE PTR [rax],al
+  37:	00 02                	add    BYTE PTR [rdx],al
+  39:	00 00                	add    BYTE PTR [rax],al
+  3b:	00 00                	add    BYTE PTR [rax],al
+  3d:	00 00                	add    BYTE PTR [rax],al
+	...
+
+Disassembly of section .data:
+
+0000000000000000 <__data_start>:
+   0:	00 00                	add    BYTE PTR [rax],al
+	...

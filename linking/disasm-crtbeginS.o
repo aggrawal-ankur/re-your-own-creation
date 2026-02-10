@@ -1,0 +1,105 @@
+
+/usr/lib/gcc/x86_64-linux-gnu/14/crtbeginS.o:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000000000 <deregister_tm_clones>:
+   0:	48 8d 3d 00 00 00 00 	lea    rdi,[rip+0x0]        # 7 <deregister_tm_clones+0x7>
+   7:	48 8d 05 00 00 00 00 	lea    rax,[rip+0x0]        # e <deregister_tm_clones+0xe>
+   e:	48 39 f8             	cmp    rax,rdi
+  11:	74 15                	je     28 <deregister_tm_clones+0x28>
+  13:	48 8b 05 00 00 00 00 	mov    rax,QWORD PTR [rip+0x0]        # 1a <deregister_tm_clones+0x1a>
+  1a:	48 85 c0             	test   rax,rax
+  1d:	74 09                	je     28 <deregister_tm_clones+0x28>
+  1f:	ff e0                	jmp    rax
+  21:	0f 1f 80 00 00 00 00 	nop    DWORD PTR [rax+0x0]
+  28:	c3                   	ret
+  29:	0f 1f 80 00 00 00 00 	nop    DWORD PTR [rax+0x0]
+
+0000000000000030 <register_tm_clones>:
+  30:	48 8d 3d 00 00 00 00 	lea    rdi,[rip+0x0]        # 37 <register_tm_clones+0x7>
+  37:	48 8d 35 00 00 00 00 	lea    rsi,[rip+0x0]        # 3e <register_tm_clones+0xe>
+  3e:	48 29 fe             	sub    rsi,rdi
+  41:	48 89 f0             	mov    rax,rsi
+  44:	48 c1 ee 3f          	shr    rsi,0x3f
+  48:	48 c1 f8 03          	sar    rax,0x3
+  4c:	48 01 c6             	add    rsi,rax
+  4f:	48 d1 fe             	sar    rsi,1
+  52:	74 14                	je     68 <register_tm_clones+0x38>
+  54:	48 8b 05 00 00 00 00 	mov    rax,QWORD PTR [rip+0x0]        # 5b <register_tm_clones+0x2b>
+  5b:	48 85 c0             	test   rax,rax
+  5e:	74 08                	je     68 <register_tm_clones+0x38>
+  60:	ff e0                	jmp    rax
+  62:	66 0f 1f 44 00 00    	nop    WORD PTR [rax+rax*1+0x0]
+  68:	c3                   	ret
+  69:	0f 1f 80 00 00 00 00 	nop    DWORD PTR [rax+0x0]
+
+0000000000000070 <__do_global_dtors_aux>:
+  70:	f3 0f 1e fa          	endbr64
+  74:	80 3d 00 00 00 00 00 	cmp    BYTE PTR [rip+0x0],0x0        # 7b <__do_global_dtors_aux+0xb>
+  7b:	75 2b                	jne    a8 <__do_global_dtors_aux+0x38>
+  7d:	55                   	push   rbp
+  7e:	48 83 3d 00 00 00 00 	cmp    QWORD PTR [rip+0x0],0x0        # 86 <__do_global_dtors_aux+0x16>
+  85:	00 
+  86:	48 89 e5             	mov    rbp,rsp
+  89:	74 0c                	je     97 <__do_global_dtors_aux+0x27>
+  8b:	48 8b 3d 00 00 00 00 	mov    rdi,QWORD PTR [rip+0x0]        # 92 <__do_global_dtors_aux+0x22>
+  92:	e8 00 00 00 00       	call   97 <__do_global_dtors_aux+0x27>
+  97:	e8 64 ff ff ff       	call   0 <deregister_tm_clones>
+  9c:	c6 05 00 00 00 00 01 	mov    BYTE PTR [rip+0x0],0x1        # a3 <__do_global_dtors_aux+0x33>
+  a3:	5d                   	pop    rbp
+  a4:	c3                   	ret
+  a5:	0f 1f 00             	nop    DWORD PTR [rax]
+  a8:	c3                   	ret
+  a9:	0f 1f 80 00 00 00 00 	nop    DWORD PTR [rax+0x0]
+
+00000000000000b0 <frame_dummy>:
+  b0:	f3 0f 1e fa          	endbr64
+  b4:	e9 77 ff ff ff       	jmp    30 <register_tm_clones>
+
+Disassembly of section .data.rel.local:
+
+0000000000000000 <__dso_handle>:
+	...
+
+Disassembly of section .fini_array:
+
+0000000000000000 <__do_global_dtors_aux_fini_array_entry>:
+	...
+
+Disassembly of section .init_array:
+
+0000000000000000 <__frame_dummy_init_array_entry>:
+	...
+
+Disassembly of section .comment:
+
+0000000000000000 <.comment>:
+   0:	00 47 43             	add    BYTE PTR [rdi+0x43],al
+   3:	43 3a 20             	rex.XB cmp spl,BYTE PTR [r8]
+   6:	28 44 65 62          	sub    BYTE PTR [rbp+riz*2+0x62],al
+   a:	69 61 6e 20 31 34 2e 	imul   esp,DWORD PTR [rcx+0x6e],0x2e343120
+  11:	32 2e                	xor    ch,BYTE PTR [rsi]
+  13:	30 2d 31 39 29 20    	xor    BYTE PTR [rip+0x20293931],ch        # 2029394a <frame_dummy+0x2029389a>
+  19:	31 34 2e             	xor    DWORD PTR [rsi+rbp*1],esi
+  1c:	32 2e                	xor    ch,BYTE PTR [rsi]
+  1e:	30 00                	xor    BYTE PTR [rax],al
+
+Disassembly of section .note.gnu.property:
+
+0000000000000000 <.note.gnu.property>:
+   0:	04 00                	add    al,0x0
+   2:	00 00                	add    BYTE PTR [rax],al
+   4:	10 00                	adc    BYTE PTR [rax],al
+   6:	00 00                	add    BYTE PTR [rax],al
+   8:	05 00 00 00 47       	add    eax,0x47000000
+   d:	4e 55                	rex.WRX push rbp
+   f:	00 02                	add    BYTE PTR [rdx],al
+  11:	00 00                	add    BYTE PTR [rax],al
+  13:	c0 04 00 00          	rol    BYTE PTR [rax+rax*1],0x0
+  17:	00 03                	add    BYTE PTR [rbx],al
+  19:	00 00                	add    BYTE PTR [rax],al
+  1b:	00 00                	add    BYTE PTR [rax],al
+  1d:	00 00                	add    BYTE PTR [rax],al
+	...

@@ -1,0 +1,40 @@
+
+/usr/lib/gcc/x86_64-linux-gnu/14/crtendS.o:     file format elf64-x86-64
+
+
+Disassembly of section .eh_frame:
+
+0000000000000000 <__FRAME_END__>:
+   0:	00 00                	add    BYTE PTR [rax],al
+	...
+
+Disassembly of section .comment:
+
+0000000000000000 <.comment>:
+   0:	00 47 43             	add    BYTE PTR [rdi+0x43],al
+   3:	43 3a 20             	rex.XB cmp spl,BYTE PTR [r8]
+   6:	28 44 65 62          	sub    BYTE PTR [rbp+riz*2+0x62],al
+   a:	69 61 6e 20 31 34 2e 	imul   esp,DWORD PTR [rcx+0x6e],0x2e343120
+  11:	32 2e                	xor    ch,BYTE PTR [rsi]
+  13:	30 2d 31 39 29 20    	xor    BYTE PTR [rip+0x20293931],ch        # 2029394a <__TMC_END__+0x2029394a>
+  19:	31 34 2e             	xor    DWORD PTR [rsi+rbp*1],esi
+  1c:	32 2e                	xor    ch,BYTE PTR [rsi]
+  1e:	30 00                	xor    BYTE PTR [rax],al
+
+Disassembly of section .note.gnu.property:
+
+0000000000000000 <.note.gnu.property>:
+   0:	04 00                	add    al,0x0
+   2:	00 00                	add    BYTE PTR [rax],al
+   4:	10 00                	adc    BYTE PTR [rax],al
+   6:	00 00                	add    BYTE PTR [rax],al
+   8:	05 00 00 00 47       	add    eax,0x47000000
+   d:	4e 55                	rex.WRX push rbp
+   f:	00 02                	add    BYTE PTR [rdx],al
+  11:	00 00                	add    BYTE PTR [rax],al
+  13:	c0 04 00 00          	rol    BYTE PTR [rax+rax*1],0x0
+  17:	00 03                	add    BYTE PTR [rbx],al
+  19:	00 00                	add    BYTE PTR [rax],al
+  1b:	00 00                	add    BYTE PTR [rax],al
+  1d:	00 00                	add    BYTE PTR [rax],al
+	...
