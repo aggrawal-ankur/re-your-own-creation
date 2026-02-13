@@ -142,377 +142,377 @@ Disassembly of section .text:
     11a5:	48 89 e0             	mov    rax,rsp
     11a8:	48 89 c3             	mov    rbx,rax
     11ab:	66 0f ef c0          	pxor   xmm0,xmm0
-    11af:	0f 29 85 70 ff ff ff 	movaps XMMWORD PTR [rbp-0x90],xmm0
+    11af:	0f 29 85 70 ff ff ff 	movaps XMMWORD PTR [rbp-0x90],xmm0    # arr1
     11b6:	0f 29 45 80          	movaps XMMWORD PTR [rbp-0x80],xmm0
     11ba:	48 8d 05 47 0e 00 00 	lea    rax,[rip+0xe47]        # 2008 <_IO_stdin_used+0x8>
     11c1:	48 89 c7             	mov    rdi,rax
-    11c4:	e8 77 fe ff ff       	call   1040 <puts@plt>
+    11c4:	e8 77 fe ff ff       	call   1040 <puts@plt>    # printf("Running init()...."")
     11c9:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
-    11d0:	ba 0a 00 00 00       	mov    edx,0xa
-    11d5:	be 04 00 00 00       	mov    esi,0x4
-    11da:	48 89 c7             	mov    rdi,rax
+    11d0:	ba 0a 00 00 00       	mov    edx,0xa    # rdx=10=capacity
+    11d5:	be 04 00 00 00       	mov    esi,0x4    # rsi=sizeof(int)=4
+    11da:	48 89 c7             	mov    rdi,rax    # rdi=&arr1
     11dd:	e8 d2 08 00 00       	call   1ab4 <init>
-    11e2:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax
+    11e2:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res=init(..)
     11e5:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
     11e8:	89 c6                	mov    esi,eax
     11ea:	48 8d 05 2a 0e 00 00 	lea    rax,[rip+0xe2a]        # 201b <_IO_stdin_used+0x1b>
     11f1:	48 89 c7             	mov    rdi,rax
     11f4:	b8 00 00 00 00       	mov    eax,0x0
-    11f9:	e8 52 fe ff ff       	call   1050 <printf@plt>
+    11f9:	e8 52 fe ff ff       	call   1050 <printf@plt>    # printf(res)
     11fe:	48 8b 85 78 ff ff ff 	mov    rax,QWORD PTR [rbp-0x88]
     1205:	48 89 c6             	mov    rsi,rax
     1208:	48 8d 05 17 0e 00 00 	lea    rax,[rip+0xe17]        # 2026 <_IO_stdin_used+0x26>
     120f:	48 89 c7             	mov    rdi,rax
     1212:	b8 00 00 00 00       	mov    eax,0x0
-    1217:	e8 34 fe ff ff       	call   1050 <printf@plt>
+    1217:	e8 34 fe ff ff       	call   1050 <printf@plt>    # printf(elem_size)
     121c:	48 8b 45 88          	mov    rax,QWORD PTR [rbp-0x78]
     1220:	48 89 c6             	mov    rsi,rax
     1223:	48 8d 05 0c 0e 00 00 	lea    rax,[rip+0xe0c]        # 2036 <_IO_stdin_used+0x36>
     122a:	48 89 c7             	mov    rdi,rax
     122d:	b8 00 00 00 00       	mov    eax,0x0
-    1232:	e8 19 fe ff ff       	call   1050 <printf@plt>
+    1232:	e8 19 fe ff ff       	call   1050 <printf@plt>    # printf(count)
     1237:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]
     123b:	48 89 c6             	mov    rsi,rax
     123e:	48 8d 05 01 0e 00 00 	lea    rax,[rip+0xe01]        # 2046 <_IO_stdin_used+0x46>
     1245:	48 89 c7             	mov    rdi,rax
     1248:	b8 00 00 00 00       	mov    eax,0x0
-    124d:	e8 fe fd ff ff       	call   1050 <printf@plt>
+    124d:	e8 fe fd ff ff       	call   1050 <printf@plt>    # printf(capacity)
     1252:	48 8d 05 fa 0d 00 00 	lea    rax,[rip+0xdfa]        # 2053 <_IO_stdin_used+0x53>
     1259:	48 89 c7             	mov    rdi,rax
-    125c:	e8 df fd ff ff       	call   1040 <puts@plt>
+    125c:	e8 df fd ff ff       	call   1040 <puts@plt>    # printf("\n\n")
     1261:	48 8d 05 ed 0d 00 00 	lea    rax,[rip+0xded]        # 2055 <_IO_stdin_used+0x55>
     1268:	48 89 c7             	mov    rdi,rax
-    126b:	e8 d0 fd ff ff       	call   1040 <puts@plt>
+    126b:	e8 d0 fd ff ff       	call   1040 <puts@plt>    # printf("Running extend()....")
     1270:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
-    1277:	be 0a 00 00 00       	mov    esi,0xa
-    127c:	48 89 c7             	mov    rdi,rax
-    127f:	e8 a1 08 00 00       	call   1b25 <extend>
-    1284:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax
+    1277:	be 0a 00 00 00       	mov    esi,0xa    # add=10
+    127c:	48 89 c7             	mov    rdi,rax    # &arr1
+    127f:	e8 a1 08 00 00       	call   1b25 <extend>    # extend(&arr1, 10)
+    1284:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res=extend(..)
     1287:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
     128a:	89 c6                	mov    esi,eax
     128c:	48 8d 05 88 0d 00 00 	lea    rax,[rip+0xd88]        # 201b <_IO_stdin_used+0x1b>
     1293:	48 89 c7             	mov    rdi,rax
     1296:	b8 00 00 00 00       	mov    eax,0x0
-    129b:	e8 b0 fd ff ff       	call   1050 <printf@plt>
+    129b:	e8 b0 fd ff ff       	call   1050 <printf@plt>    # printf(res)
     12a0:	48 8b 85 78 ff ff ff 	mov    rax,QWORD PTR [rbp-0x88]
     12a7:	48 89 c6             	mov    rsi,rax
     12aa:	48 8d 05 75 0d 00 00 	lea    rax,[rip+0xd75]        # 2026 <_IO_stdin_used+0x26>
     12b1:	48 89 c7             	mov    rdi,rax
     12b4:	b8 00 00 00 00       	mov    eax,0x0
-    12b9:	e8 92 fd ff ff       	call   1050 <printf@plt>
+    12b9:	e8 92 fd ff ff       	call   1050 <printf@plt>    # printf(elem_size)
     12be:	48 8b 45 88          	mov    rax,QWORD PTR [rbp-0x78]
     12c2:	48 89 c6             	mov    rsi,rax
     12c5:	48 8d 05 6a 0d 00 00 	lea    rax,[rip+0xd6a]        # 2036 <_IO_stdin_used+0x36>
     12cc:	48 89 c7             	mov    rdi,rax
     12cf:	b8 00 00 00 00       	mov    eax,0x0
-    12d4:	e8 77 fd ff ff       	call   1050 <printf@plt>
+    12d4:	e8 77 fd ff ff       	call   1050 <printf@plt>    # printf(capacity)
     12d9:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]
     12dd:	48 89 c6             	mov    rsi,rax
     12e0:	48 8d 05 5f 0d 00 00 	lea    rax,[rip+0xd5f]        # 2046 <_IO_stdin_used+0x46>
     12e7:	48 89 c7             	mov    rdi,rax
     12ea:	b8 00 00 00 00       	mov    eax,0x0
-    12ef:	e8 5c fd ff ff       	call   1050 <printf@plt>
+    12ef:	e8 5c fd ff ff       	call   1050 <printf@plt>    # printf(count)
     12f4:	48 8d 05 58 0d 00 00 	lea    rax,[rip+0xd58]        # 2053 <_IO_stdin_used+0x53>
     12fb:	48 89 c7             	mov    rdi,rax
-    12fe:	e8 3d fd ff ff       	call   1040 <puts@plt>
-    1303:	c7 85 6c ff ff ff 05 	mov    DWORD PTR [rbp-0x94],0x5
+    12fe:	e8 3d fd ff ff       	call   1040 <puts@plt>    # printf("\n\n")
+    1303:	c7 85 6c ff ff ff 05 	mov    DWORD PTR [rbp-0x94],0x5    # var=5
     130a:	00 00 00 
     130d:	48 8d 05 56 0d 00 00 	lea    rax,[rip+0xd56]        # 206a <_IO_stdin_used+0x6a>
     1314:	48 89 c7             	mov    rdi,rax
-    1317:	e8 24 fd ff ff       	call   1040 <puts@plt>
-    131c:	48 8d 95 6c ff ff ff 	lea    rdx,[rbp-0x94]
-    1323:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
-    132a:	48 89 d6             	mov    rsi,rdx
-    132d:	48 89 c7             	mov    rdi,rax
-    1330:	e8 56 08 00 00       	call   1b8b <pushOne>
-    1335:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax
+    1317:	e8 24 fd ff ff       	call   1040 <puts@plt>    # printf("Running pushOne().....")
+    131c:	48 8d 95 6c ff ff ff 	lea    rdx,[rbp-0x94]    # &var
+    1323:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]    # &arr1
+    132a:	48 89 d6             	mov    rsi,rdx    # &var
+    132d:	48 89 c7             	mov    rdi,rax    # &arr1
+    1330:	e8 56 08 00 00       	call   1b8b <pushOne>    # pushOne(&arr1, &var)
+    1335:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res=pushOne
     1338:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
     133b:	89 c6                	mov    esi,eax
     133d:	48 8d 05 d7 0c 00 00 	lea    rax,[rip+0xcd7]        # 201b <_IO_stdin_used+0x1b>
     1344:	48 89 c7             	mov    rdi,rax
     1347:	b8 00 00 00 00       	mov    eax,0x0
-    134c:	e8 ff fc ff ff       	call   1050 <printf@plt>
+    134c:	e8 ff fc ff ff       	call   1050 <printf@plt>    # printf(res)
     1351:	48 8b 85 78 ff ff ff 	mov    rax,QWORD PTR [rbp-0x88]
     1358:	48 89 c6             	mov    rsi,rax
     135b:	48 8d 05 c4 0c 00 00 	lea    rax,[rip+0xcc4]        # 2026 <_IO_stdin_used+0x26>
     1362:	48 89 c7             	mov    rdi,rax
     1365:	b8 00 00 00 00       	mov    eax,0x0
-    136a:	e8 e1 fc ff ff       	call   1050 <printf@plt>
+    136a:	e8 e1 fc ff ff       	call   1050 <printf@plt>    # printf(elem_size)
     136f:	48 8b 45 88          	mov    rax,QWORD PTR [rbp-0x78]
     1373:	48 89 c6             	mov    rsi,rax
     1376:	48 8d 05 b9 0c 00 00 	lea    rax,[rip+0xcb9]        # 2036 <_IO_stdin_used+0x36>
     137d:	48 89 c7             	mov    rdi,rax
     1380:	b8 00 00 00 00       	mov    eax,0x0
-    1385:	e8 c6 fc ff ff       	call   1050 <printf@plt>
+    1385:	e8 c6 fc ff ff       	call   1050 <printf@plt>    # printf(capacity)
     138a:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]
     138e:	48 89 c6             	mov    rsi,rax
     1391:	48 8d 05 ae 0c 00 00 	lea    rax,[rip+0xcae]        # 2046 <_IO_stdin_used+0x46>
     1398:	48 89 c7             	mov    rdi,rax
     139b:	b8 00 00 00 00       	mov    eax,0x0
-    13a0:	e8 ab fc ff ff       	call   1050 <printf@plt>
+    13a0:	e8 ab fc ff ff       	call   1050 <printf@plt>    # printf(count)
     13a5:	48 8d 05 a7 0c 00 00 	lea    rax,[rip+0xca7]        # 2053 <_IO_stdin_used+0x53>
     13ac:	48 89 c7             	mov    rdi,rax
-    13af:	e8 8c fc ff ff       	call   1040 <puts@plt>
+    13af:	e8 8c fc ff ff       	call   1040 <puts@plt>    # printf("\n\n")
     13b4:	48 8d 05 c5 0c 00 00 	lea    rax,[rip+0xcc5]        # 2080 <_IO_stdin_used+0x80>
     13bb:	48 89 c7             	mov    rdi,rax
-    13be:	e8 7d fc ff ff       	call   1040 <puts@plt>
-    13c3:	c7 85 f8 fe ff ff 00 	mov    DWORD PTR [rbp-0x108],0x0
+    13be:	e8 7d fc ff ff       	call   1040 <puts@plt>    # printf("Running pushOne()....")
+    13c3:	c7 85 f8 fe ff ff 00 	mov    DWORD PTR [rbp-0x108],0x0    # iterator (i=0, init val)
     13ca:	00 00 00 
     13cd:	eb 28                	jmp    13f7 <main+0x25e>
-    13cf:	48 8d 95 f8 fe ff ff 	lea    rdx,[rbp-0x108]
-    13d6:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
-    13dd:	48 89 d6             	mov    rsi,rdx
-    13e0:	48 89 c7             	mov    rdi,rax
-    13e3:	e8 a3 07 00 00       	call   1b8b <pushOne>
-    13e8:	8b 85 f8 fe ff ff    	mov    eax,DWORD PTR [rbp-0x108]
-    13ee:	83 c0 01             	add    eax,0x1
-    13f1:	89 85 f8 fe ff ff    	mov    DWORD PTR [rbp-0x108],eax
-    13f7:	8b 85 f8 fe ff ff    	mov    eax,DWORD PTR [rbp-0x108]
-    13fd:	83 f8 09             	cmp    eax,0x9
+    13cf:	48 8d 95 f8 fe ff ff 	lea    rdx,[rbp-0x108]    # &i
+    13d6:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]     # &arr1
+    13dd:	48 89 d6             	mov    rsi,rdx    # &i
+    13e0:	48 89 c7             	mov    rdi,rax    # &arr1
+    13e3:	e8 a3 07 00 00       	call   1b8b <pushOne>    # pushOne(&arr1, &i)
+    13e8:	8b 85 f8 fe ff ff    	mov    eax,DWORD PTR [rbp-0x108]    # load i
+    13ee:	83 c0 01             	add    eax,0x1    # i++
+    13f1:	89 85 f8 fe ff ff    	mov    DWORD PTR [rbp-0x108],eax    # update i
+    13f7:	8b 85 f8 fe ff ff    	mov    eax,DWORD PTR [rbp-0x108]    # load i
+    13fd:	83 f8 09             	cmp    eax,0x9    # i<=9 (org: i<10)
     1400:	7e cd                	jle    13cf <main+0x236>
     1402:	48 8b 85 78 ff ff ff 	mov    rax,QWORD PTR [rbp-0x88]
     1409:	48 89 c6             	mov    rsi,rax
     140c:	48 8d 05 13 0c 00 00 	lea    rax,[rip+0xc13]        # 2026 <_IO_stdin_used+0x26>
     1413:	48 89 c7             	mov    rdi,rax
     1416:	b8 00 00 00 00       	mov    eax,0x0
-    141b:	e8 30 fc ff ff       	call   1050 <printf@plt>
+    141b:	e8 30 fc ff ff       	call   1050 <printf@plt>    # printf(elem_size)
     1420:	48 8b 45 88          	mov    rax,QWORD PTR [rbp-0x78]
     1424:	48 89 c6             	mov    rsi,rax
     1427:	48 8d 05 08 0c 00 00 	lea    rax,[rip+0xc08]        # 2036 <_IO_stdin_used+0x36>
     142e:	48 89 c7             	mov    rdi,rax
     1431:	b8 00 00 00 00       	mov    eax,0x0
-    1436:	e8 15 fc ff ff       	call   1050 <printf@plt>
+    1436:	e8 15 fc ff ff       	call   1050 <printf@plt>    # printf(capacity)
     143b:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]
     143f:	48 89 c6             	mov    rsi,rax
     1442:	48 8d 05 fd 0b 00 00 	lea    rax,[rip+0xbfd]        # 2046 <_IO_stdin_used+0x46>
     1449:	48 89 c7             	mov    rdi,rax
     144c:	b8 00 00 00 00       	mov    eax,0x0
-    1451:	e8 fa fb ff ff       	call   1050 <printf@plt>
+    1451:	e8 fa fb ff ff       	call   1050 <printf@plt>    # printf(count)
     1456:	48 8d 05 f6 0b 00 00 	lea    rax,[rip+0xbf6]        # 2053 <_IO_stdin_used+0x53>
     145d:	48 89 c7             	mov    rdi,rax
-    1460:	e8 db fb ff ff       	call   1040 <puts@plt>
+    1460:	e8 db fb ff ff       	call   1040 <puts@plt>    # printf("\n\n")
     1465:	48 8d 05 37 0c 00 00 	lea    rax,[rip+0xc37]        # 20a3 <_IO_stdin_used+0xa3>
     146c:	48 89 c7             	mov    rdi,rax
-    146f:	e8 cc fb ff ff       	call   1040 <puts@plt>
-    1474:	c7 85 30 ff ff ff 64 	mov    DWORD PTR [rbp-0xd0],0x64
+    146f:	e8 cc fb ff ff       	call   1040 <puts@plt>    # printf("Running pushMany()....")
+    1474:	c7 85 30 ff ff ff 64 	mov    DWORD PTR [rbp-0xd0],0x64    # int sarr[0]=100
     147b:	00 00 00 
-    147e:	c7 85 34 ff ff ff 63 	mov    DWORD PTR [rbp-0xcc],0x63
+    147e:	c7 85 34 ff ff ff 63 	mov    DWORD PTR [rbp-0xcc],0x63    # sarr[1]=99
     1485:	00 00 00 
-    1488:	c7 85 38 ff ff ff 62 	mov    DWORD PTR [rbp-0xc8],0x62
+    1488:	c7 85 38 ff ff ff 62 	mov    DWORD PTR [rbp-0xc8],0x62    # sarr[2]=98
     148f:	00 00 00 
-    1492:	c7 85 3c ff ff ff 61 	mov    DWORD PTR [rbp-0xc4],0x61
+    1492:	c7 85 3c ff ff ff 61 	mov    DWORD PTR [rbp-0xc4],0x61    # sarr[3]=97
     1499:	00 00 00 
-    149c:	c7 85 40 ff ff ff 60 	mov    DWORD PTR [rbp-0xc0],0x60
+    149c:	c7 85 40 ff ff ff 60 	mov    DWORD PTR [rbp-0xc0],0x60    # sarr[4]=96
     14a3:	00 00 00 
-    14a6:	c7 85 44 ff ff ff 5f 	mov    DWORD PTR [rbp-0xbc],0x5f
+    14a6:	c7 85 44 ff ff ff 5f 	mov    DWORD PTR [rbp-0xbc],0x5f    # sarr[5]=95
     14ad:	00 00 00 
-    14b0:	c7 85 48 ff ff ff 5e 	mov    DWORD PTR [rbp-0xb8],0x5e
+    14b0:	c7 85 48 ff ff ff 5e 	mov    DWORD PTR [rbp-0xb8],0x5e    # sarr[6]=94
     14b7:	00 00 00 
-    14ba:	c7 85 4c ff ff ff 5d 	mov    DWORD PTR [rbp-0xb4],0x5d
+    14ba:	c7 85 4c ff ff ff 5d 	mov    DWORD PTR [rbp-0xb4],0x5d    # sarr[7]=93
     14c1:	00 00 00 
-    14c4:	c7 85 50 ff ff ff 5c 	mov    DWORD PTR [rbp-0xb0],0x5c
+    14c4:	c7 85 50 ff ff ff 5c 	mov    DWORD PTR [rbp-0xb0],0x5c    # sarr[8]=92
     14cb:	00 00 00 
-    14ce:	c7 85 54 ff ff ff 5b 	mov    DWORD PTR [rbp-0xac],0x5b
+    14ce:	c7 85 54 ff ff ff 5b 	mov    DWORD PTR [rbp-0xac],0x5b    # sarr[9]=91
     14d5:	00 00 00 
-    14d8:	c7 85 58 ff ff ff 5a 	mov    DWORD PTR [rbp-0xa8],0x5a
+    14d8:	c7 85 58 ff ff ff 5a 	mov    DWORD PTR [rbp-0xa8],0x5a    # sarr[10]=90
     14df:	00 00 00 
-    14e2:	c7 85 5c ff ff ff 59 	mov    DWORD PTR [rbp-0xa4],0x59
+    14e2:	c7 85 5c ff ff ff 59 	mov    DWORD PTR [rbp-0xa4],0x59    # sarr[11]=89
     14e9:	00 00 00 
-    14ec:	c7 85 60 ff ff ff 58 	mov    DWORD PTR [rbp-0xa0],0x58
+    14ec:	c7 85 60 ff ff ff 58 	mov    DWORD PTR [rbp-0xa0],0x58    # sarr[12]=88
     14f3:	00 00 00 
-    14f6:	c7 85 64 ff ff ff 57 	mov    DWORD PTR [rbp-0x9c],0x57
+    14f6:	c7 85 64 ff ff ff 57 	mov    DWORD PTR [rbp-0x9c],0x57    # sarr[13]=87
     14fd:	00 00 00 
-    1500:	c7 85 68 ff ff ff 56 	mov    DWORD PTR [rbp-0x98],0x56
+    1500:	c7 85 68 ff ff ff 56 	mov    DWORD PTR [rbp-0x98],0x56    # sarr[14]=86
     1507:	00 00 00 
-    150a:	48 8d 8d 30 ff ff ff 	lea    rcx,[rbp-0xd0]
-    1511:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
-    1518:	ba 0f 00 00 00       	mov    edx,0xf
-    151d:	48 89 ce             	mov    rsi,rcx
-    1520:	48 89 c7             	mov    rdi,rax
+    150a:	48 8d 8d 30 ff ff ff 	lea    rcx,[rbp-0xd0]   # &sarr[0]
+    1511:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]   # &arr1
+    1518:	ba 0f 00 00 00       	mov    edx,0xf    # count=15
+    151d:	48 89 ce             	mov    rsi,rcx    # &sarr[0]
+    1520:	48 89 c7             	mov    rdi,rax    # &arr1
     1523:	e8 c7 06 00 00       	call   1bef <pushMany>
-    1528:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax
+    1528:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res
     152b:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
     152e:	89 c6                	mov    esi,eax
     1530:	48 8d 05 e4 0a 00 00 	lea    rax,[rip+0xae4]        # 201b <_IO_stdin_used+0x1b>
     1537:	48 89 c7             	mov    rdi,rax
     153a:	b8 00 00 00 00       	mov    eax,0x0
-    153f:	e8 0c fb ff ff       	call   1050 <printf@plt>
+    153f:	e8 0c fb ff ff       	call   1050 <printf@plt>    # printf(res)
     1544:	48 8b 85 78 ff ff ff 	mov    rax,QWORD PTR [rbp-0x88]
     154b:	48 89 c6             	mov    rsi,rax
     154e:	48 8d 05 d1 0a 00 00 	lea    rax,[rip+0xad1]        # 2026 <_IO_stdin_used+0x26>
     1555:	48 89 c7             	mov    rdi,rax
     1558:	b8 00 00 00 00       	mov    eax,0x0
-    155d:	e8 ee fa ff ff       	call   1050 <printf@plt>
+    155d:	e8 ee fa ff ff       	call   1050 <printf@plt>    # printf(elem_size)
     1562:	48 8b 45 88          	mov    rax,QWORD PTR [rbp-0x78]
     1566:	48 89 c6             	mov    rsi,rax
     1569:	48 8d 05 c6 0a 00 00 	lea    rax,[rip+0xac6]        # 2036 <_IO_stdin_used+0x36>
     1570:	48 89 c7             	mov    rdi,rax
     1573:	b8 00 00 00 00       	mov    eax,0x0
-    1578:	e8 d3 fa ff ff       	call   1050 <printf@plt>
+    1578:	e8 d3 fa ff ff       	call   1050 <printf@plt>    # printf(capacity)
     157d:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]
     1581:	48 89 c6             	mov    rsi,rax
     1584:	48 8d 05 bb 0a 00 00 	lea    rax,[rip+0xabb]        # 2046 <_IO_stdin_used+0x46>
     158b:	48 89 c7             	mov    rdi,rax
     158e:	b8 00 00 00 00       	mov    eax,0x0
-    1593:	e8 b8 fa ff ff       	call   1050 <printf@plt>
+    1593:	e8 b8 fa ff ff       	call   1050 <printf@plt>    # printf(count)
     1598:	48 8d 05 b4 0a 00 00 	lea    rax,[rip+0xab4]        # 2053 <_IO_stdin_used+0x53>
     159f:	48 89 c7             	mov    rdi,rax
-    15a2:	e8 99 fa ff ff       	call   1040 <puts@plt>
+    15a2:	e8 99 fa ff ff       	call   1040 <puts@plt>    # printf("\n\n")
     15a7:	48 8d 05 0c 0b 00 00 	lea    rax,[rip+0xb0c]        # 20ba <_IO_stdin_used+0xba>
     15ae:	48 89 c7             	mov    rdi,rax
-    15b1:	e8 8a fa ff ff       	call   1040 <puts@plt>
-    15b6:	48 c7 45 e8 00 00 00 	mov    QWORD PTR [rbp-0x18],0x0
+    15b1:	e8 8a fa ff ff       	call   1040 <puts@plt>    # printf("Running getelement()....")
+    15b6:	48 c7 45 e8 00 00 00 	mov    QWORD PTR [rbp-0x18],0x0    # i=0 (init val, loop)
     15bd:	00 
     15be:	eb 33                	jmp    15f3 <main+0x45a>
-    15c0:	48 8b 55 e8          	mov    rdx,QWORD PTR [rbp-0x18]
-    15c4:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
-    15cb:	48 89 d6             	mov    rsi,rdx
-    15ce:	48 89 c7             	mov    rdi,rax
+    15c0:	48 8b 55 e8          	mov    rdx,QWORD PTR [rbp-0x18]    # load i
+    15c4:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]    # &arr1
+    15cb:	48 89 d6             	mov    rsi,rdx    # idx=i
+    15ce:	48 89 c7             	mov    rdi,rax    # &arr1
     15d1:	e8 95 06 00 00       	call   1c6b <getelement>
-    15d6:	8b 00                	mov    eax,DWORD PTR [rax]
+    15d6:	8b 00                	mov    eax,DWORD PTR [rax]    # *(int*)getelement(&arr1, idx)
     15d8:	89 c6                	mov    esi,eax
     15da:	48 8d 05 f2 0a 00 00 	lea    rax,[rip+0xaf2]        # 20d3 <_IO_stdin_used+0xd3>
     15e1:	48 89 c7             	mov    rdi,rax
     15e4:	b8 00 00 00 00       	mov    eax,0x0
-    15e9:	e8 62 fa ff ff       	call   1050 <printf@plt>
-    15ee:	48 83 45 e8 01       	add    QWORD PTR [rbp-0x18],0x1
-    15f3:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]
-    15f7:	48 39 45 e8          	cmp    QWORD PTR [rbp-0x18],rax
+    15e9:	e8 62 fa ff ff       	call   1050 <printf@plt>    # printf("%d, ", esi)
+    15ee:	48 83 45 e8 01       	add    QWORD PTR [rbp-0x18],0x1    # i++
+    15f3:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]    # arr->count
+    15f7:	48 39 45 e8          	cmp    QWORD PTR [rbp-0x18],rax    # (i < count)
     15fb:	72 c3                	jb     15c0 <main+0x427>
     15fd:	48 8d 05 d4 0a 00 00 	lea    rax,[rip+0xad4]        # 20d8 <_IO_stdin_used+0xd8>
     1604:	48 89 c7             	mov    rdi,rax
-    1607:	e8 34 fa ff ff       	call   1040 <puts@plt>
+    1607:	e8 34 fa ff ff       	call   1040 <puts@plt>    # printf("\n\n")
     160c:	48 8d 05 cd 0a 00 00 	lea    rax,[rip+0xacd]        # 20e0 <_IO_stdin_used+0xe0>
     1613:	48 89 c7             	mov    rdi,rax
-    1616:	e8 25 fa ff ff       	call   1040 <puts@plt>
-    161b:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
-    1622:	be 00 00 00 00       	mov    esi,0x0
-    1627:	48 89 c7             	mov    rdi,rax
+    1616:	e8 25 fa ff ff       	call   1040 <puts@plt>    # printf("getelement where the base is hoisted outside")
+    161b:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]     # &arr1
+    1622:	be 00 00 00 00       	mov    esi,0x0    # idx=0
+    1627:	48 89 c7             	mov    rdi,rax    # &arr1
     162a:	e8 3c 06 00 00       	call   1c6b <getelement>
-    162f:	48 89 45 e0          	mov    QWORD PTR [rbp-0x20],rax
-    1633:	48 c7 45 d8 00 00 00 	mov    QWORD PTR [rbp-0x28],0x0
+    162f:	48 89 45 e0          	mov    QWORD PTR [rbp-0x20],rax    # getelement(&arr1, idx=0)
+    1633:	48 c7 45 d8 00 00 00 	mov    QWORD PTR [rbp-0x28],0x0    # i=0 (init val, loop)
     163a:	00 
     163b:	eb 29                	jmp    1666 <main+0x4cd>
-    163d:	48 8b 45 e0          	mov    rax,QWORD PTR [rbp-0x20]
-    1641:	48 8d 50 04          	lea    rdx,[rax+0x4]
-    1645:	48 89 55 e0          	mov    QWORD PTR [rbp-0x20],rdx
-    1649:	8b 00                	mov    eax,DWORD PTR [rax]
+    163d:	48 8b 45 e0          	mov    rax,QWORD PTR [rbp-0x20]    # base
+    1641:	48 8d 50 04          	lea    rdx,[rax+0x4]    # &(base + 4)
+    1645:	48 89 55 e0          	mov    QWORD PTR [rbp-0x20],rdx    # base++ (update the pointer by scale=4)
+    1649:	8b 00                	mov    eax,DWORD PTR [rax]    # arr->ptr[i]
     164b:	89 c6                	mov    esi,eax
     164d:	48 8d 05 7f 0a 00 00 	lea    rax,[rip+0xa7f]        # 20d3 <_IO_stdin_used+0xd3>
     1654:	48 89 c7             	mov    rdi,rax
     1657:	b8 00 00 00 00       	mov    eax,0x0
-    165c:	e8 ef f9 ff ff       	call   1050 <printf@plt>
-    1661:	48 83 45 d8 01       	add    QWORD PTR [rbp-0x28],0x1
-    1666:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]
-    166a:	48 39 45 d8          	cmp    QWORD PTR [rbp-0x28],rax
+    165c:	e8 ef f9 ff ff       	call   1050 <printf@plt>    # printf("%d, ", esi)
+    1661:	48 83 45 d8 01       	add    QWORD PTR [rbp-0x28],0x1    # i++
+    1666:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]    # arr->count
+    166a:	48 39 45 d8          	cmp    QWORD PTR [rbp-0x28],rax    # (i<count)
     166e:	72 cd                	jb     163d <main+0x4a4>
     1670:	48 8d 05 61 0a 00 00 	lea    rax,[rip+0xa61]        # 20d8 <_IO_stdin_used+0xd8>
     1677:	48 89 c7             	mov    rdi,rax
-    167a:	e8 c1 f9 ff ff       	call   1040 <puts@plt>
+    167a:	e8 c1 f9 ff ff       	call   1040 <puts@plt>    # printf("\n\n")
     167f:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
-    1686:	be 13 00 00 00       	mov    esi,0x13
+    1686:	be 13 00 00 00       	mov    esi,0x13    # idx=19
     168b:	48 89 c7             	mov    rdi,rax
-    168e:	e8 d8 05 00 00       	call   1c6b <getelement>
-    1693:	48 89 45 a8          	mov    QWORD PTR [rbp-0x58],rax
-    1697:	c7 85 2c ff ff ff 37 	mov    DWORD PTR [rbp-0xd4],0x37
+    168e:	e8 d8 05 00 00       	call   1c6b <getelement>    # getelement(&arr1, idx=19)
+    1693:	48 89 45 a8          	mov    QWORD PTR [rbp-0x58],rax     # idx19
+    1697:	c7 85 2c ff ff ff 37 	mov    DWORD PTR [rbp-0xd4],0x37    # replacement int (55)
     169e:	00 00 00 
     16a1:	48 8d 05 7e 0a 00 00 	lea    rax,[rip+0xa7e]        # 2126 <_IO_stdin_used+0x126>
     16a8:	48 89 c7             	mov    rdi,rax
-    16ab:	e8 90 f9 ff ff       	call   1040 <puts@plt>
+    16ab:	e8 90 f9 ff ff       	call   1040 <puts@plt>    # printf("Running setidx()....")
     16b0:	48 8b 45 a8          	mov    rax,QWORD PTR [rbp-0x58]
     16b4:	8b 00                	mov    eax,DWORD PTR [rax]
     16b6:	89 c6                	mov    esi,eax
     16b8:	48 8d 05 7c 0a 00 00 	lea    rax,[rip+0xa7c]        # 213b <_IO_stdin_used+0x13b>
     16bf:	48 89 c7             	mov    rdi,rax
     16c2:	b8 00 00 00 00       	mov    eax,0x0
-    16c7:	e8 84 f9 ff ff       	call   1050 <printf@plt>
-    16cc:	48 8d 8d 2c ff ff ff 	lea    rcx,[rbp-0xd4]
-    16d3:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
-    16da:	ba 13 00 00 00       	mov    edx,0x13
+    16c7:	e8 84 f9 ff ff       	call   1050 <printf@plt>    # printf("idx before")
+    16cc:	48 8d 8d 2c ff ff ff 	lea    rcx,[rbp-0xd4]    # &(55)
+    16d3:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]    # &arr1
+    16da:	ba 13 00 00 00       	mov    edx,0x13    # idx=19
     16df:	48 89 ce             	mov    rsi,rcx
     16e2:	48 89 c7             	mov    rdi,rax
-    16e5:	e8 ba 05 00 00       	call   1ca4 <setidx>
-    16ea:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax
+    16e5:	e8 ba 05 00 00       	call   1ca4 <setidx>    # setidx(&arr1, replacement, idx)
+    16ea:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res
     16ed:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
     16f0:	89 c6                	mov    esi,eax
     16f2:	48 8d 05 22 09 00 00 	lea    rax,[rip+0x922]        # 201b <_IO_stdin_used+0x1b>
     16f9:	48 89 c7             	mov    rdi,rax
     16fc:	b8 00 00 00 00       	mov    eax,0x0
-    1701:	e8 4a f9 ff ff       	call   1050 <printf@plt>
+    1701:	e8 4a f9 ff ff       	call   1050 <printf@plt>    # printf(res)
     1706:	48 8b 45 a8          	mov    rax,QWORD PTR [rbp-0x58]
     170a:	8b 00                	mov    eax,DWORD PTR [rax]
     170c:	89 c6                	mov    esi,eax
     170e:	48 8d 05 3a 0a 00 00 	lea    rax,[rip+0xa3a]        # 214f <_IO_stdin_used+0x14f>
     1715:	48 89 c7             	mov    rdi,rax
     1718:	b8 00 00 00 00       	mov    eax,0x0
-    171d:	e8 2e f9 ff ff       	call   1050 <printf@plt>
+    171d:	e8 2e f9 ff ff       	call   1050 <printf@plt>    # printf("After idx19")
     1722:	48 8d 05 2a 09 00 00 	lea    rax,[rip+0x92a]        # 2053 <_IO_stdin_used+0x53>
     1729:	48 89 c7             	mov    rdi,rax
-    172c:	e8 0f f9 ff ff       	call   1040 <puts@plt>
+    172c:	e8 0f f9 ff ff       	call   1040 <puts@plt>    # printf("\n\n")
     1731:	66 0f ef c0          	pxor   xmm0,xmm0
-    1735:	0f 29 85 00 ff ff ff 	movaps XMMWORD PTR [rbp-0x100],xmm0
+    1735:	0f 29 85 00 ff ff ff 	movaps XMMWORD PTR [rbp-0x100],xmm0    # &destArr
     173c:	0f 29 85 10 ff ff ff 	movaps XMMWORD PTR [rbp-0xf0],xmm0
     1743:	48 8d 05 18 0a 00 00 	lea    rax,[rip+0xa18]        # 2162 <_IO_stdin_used+0x162>
     174a:	48 89 c7             	mov    rdi,rax
-    174d:	e8 ee f8 ff ff       	call   1040 <puts@plt>
-    1752:	48 8b 55 80          	mov    rdx,QWORD PTR [rbp-0x80]
+    174d:	e8 ee f8 ff ff       	call   1040 <puts@plt>    # printf("Running init() on destArr....")
+    1752:	48 8b 55 80          	mov    rdx,QWORD PTR [rbp-0x80]    # cap=arr1->count
     1756:	48 8d 85 00 ff ff ff 	lea    rax,[rbp-0x100]
-    175d:	be 04 00 00 00       	mov    esi,0x4
-    1762:	48 89 c7             	mov    rdi,rax
+    175d:	be 04 00 00 00       	mov    esi,0x4    # elem_size=sizeof(int)=4
+    1762:	48 89 c7             	mov    rdi,rax    # &arr2
     1765:	e8 4a 03 00 00       	call   1ab4 <init>
-    176a:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax
+    176a:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res
     176d:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
     1770:	89 c6                	mov    esi,eax
     1772:	48 8d 05 a2 08 00 00 	lea    rax,[rip+0x8a2]        # 201b <_IO_stdin_used+0x1b>
     1779:	48 89 c7             	mov    rdi,rax
     177c:	b8 00 00 00 00       	mov    eax,0x0
-    1781:	e8 ca f8 ff ff       	call   1050 <printf@plt>
+    1781:	e8 ca f8 ff ff       	call   1050 <printf@plt>    # printf(res)
     1786:	48 8d 05 f3 09 00 00 	lea    rax,[rip+0x9f3]        # 2180 <_IO_stdin_used+0x180>
     178d:	48 89 c7             	mov    rdi,rax
-    1790:	e8 ab f8 ff ff       	call   1040 <puts@plt>
-    1795:	48 8d 95 00 ff ff ff 	lea    rdx,[rbp-0x100]
-    179c:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
+    1790:	e8 ab f8 ff ff       	call   1040 <puts@plt>    # printf("\n\n")
+    1795:	48 8d 95 00 ff ff ff 	lea    rdx,[rbp-0x100]    # &destArr
+    179c:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]     # &arr1
     17a3:	48 89 d6             	mov    rsi,rdx
     17a6:	48 89 c7             	mov    rdi,rax
-    17a9:	e8 3b 05 00 00       	call   1ce9 <mergedyn2dyn>
-    17ae:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax
+    17a9:	e8 3b 05 00 00       	call   1ce9 <mergedyn2dyn>    # mergedyn2dyn(&arr1, &destArr)
+    17ae:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res
     17b1:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
     17b4:	89 c6                	mov    esi,eax
     17b6:	48 8d 05 5e 08 00 00 	lea    rax,[rip+0x85e]        # 201b <_IO_stdin_used+0x1b>
     17bd:	48 89 c7             	mov    rdi,rax
     17c0:	b8 00 00 00 00       	mov    eax,0x0
-    17c5:	e8 86 f8 ff ff       	call   1050 <printf@plt>
-    17ca:	48 c7 45 d0 00 00 00 	mov    QWORD PTR [rbp-0x30],0x0
+    17c5:	e8 86 f8 ff ff       	call   1050 <printf@plt>    # printf(res)
+    17ca:	48 c7 45 d0 00 00 00 	mov    QWORD PTR [rbp-0x30],0x0    # i=0 (init val, loop)
     17d1:	00 
     17d2:	eb 33                	jmp    1807 <main+0x66e>
-    17d4:	48 8b 55 d0          	mov    rdx,QWORD PTR [rbp-0x30]
-    17d8:	48 8d 85 00 ff ff ff 	lea    rax,[rbp-0x100]
+    17d4:	48 8b 55 d0          	mov    rdx,QWORD PTR [rbp-0x30]    # load i = arg3
+    17d8:	48 8d 85 00 ff ff ff 	lea    rax,[rbp-0x100]    # destArr->ptr
     17df:	48 89 d6             	mov    rsi,rdx
     17e2:	48 89 c7             	mov    rdi,rax
-    17e5:	e8 81 04 00 00       	call   1c6b <getelement>
-    17ea:	8b 00                	mov    eax,DWORD PTR [rax]
+    17e5:	e8 81 04 00 00       	call   1c6b <getelement>    # getelement(&destARr, idx=i)
+    17ea:	8b 00                	mov    eax,DWORD PTR [rax]    # destArr->ptr[i]
     17ec:	89 c6                	mov    esi,eax
     17ee:	48 8d 05 de 08 00 00 	lea    rax,[rip+0x8de]        # 20d3 <_IO_stdin_used+0xd3>
     17f5:	48 89 c7             	mov    rdi,rax
     17f8:	b8 00 00 00 00       	mov    eax,0x0
-    17fd:	e8 4e f8 ff ff       	call   1050 <printf@plt>
-    1802:	48 83 45 d0 01       	add    QWORD PTR [rbp-0x30],0x1
-    1807:	48 8b 85 10 ff ff ff 	mov    rax,QWORD PTR [rbp-0xf0]
-    180e:	48 39 45 d0          	cmp    QWORD PTR [rbp-0x30],rax
+    17fd:	e8 4e f8 ff ff       	call   1050 <printf@plt>    # printf("%d, ", esi)
+    1802:	48 83 45 d0 01       	add    QWORD PTR [rbp-0x30],0x1    # i++
+    1807:	48 8b 85 10 ff ff ff 	mov    rax,QWORD PTR [rbp-0xf0]    # destArr->count
+    180e:	48 39 45 d0          	cmp    QWORD PTR [rbp-0x30],rax    # i<count
     1812:	72 c0                	jb     17d4 <main+0x63b>
     1814:	48 8d 05 bd 08 00 00 	lea    rax,[rip+0x8bd]        # 20d8 <_IO_stdin_used+0xd8>
     181b:	48 89 c7             	mov    rdi,rax
-    181e:	e8 1d f8 ff ff       	call   1040 <puts@plt>
-    1823:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]
+    181e:	e8 1d f8 ff ff       	call   1040 <puts@plt>    # printf("\n\n")
+    1823:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]    # arr1->count
     1827:	48 89 c2             	mov    rdx,rax
-    182a:	48 83 ea 01          	sub    rdx,0x1
+    182a:	48 83 ea 01          	sub    rdx,0x1    # count-1
     182e:	48 89 55 a0          	mov    QWORD PTR [rbp-0x60],rdx
-    1832:	48 8d 14 85 00 00 00 	lea    rdx,[rax*4+0x0]
+    1832:	48 8d 14 85 00 00 00 	lea    rdx,[rax*4+0x0]    # count*4 + 0
     1839:	00 
     183a:	b8 10 00 00 00       	mov    eax,0x10
-    183f:	48 83 e8 01          	sub    rax,0x1
-    1843:	48 01 d0             	add    rax,rdx
-    1846:	b9 10 00 00 00       	mov    ecx,0x10
+    1843:	48 01 d0             	add    rax,rdx     # count*4 + 9
+    183f:	48 83 e8 01          	sub    rax,0x1     # 10-1 = 9
+    1846:	b9 10 00 00 00       	mov    ecx,0x10    # 10
     184b:	ba 00 00 00 00       	mov    edx,0x0
     1850:	48 f7 f1             	div    rcx
     1853:	48 6b c0 10          	imul   rax,rax,0x10
