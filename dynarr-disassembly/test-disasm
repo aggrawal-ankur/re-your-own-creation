@@ -506,87 +506,87 @@ Disassembly of section .text:
     1823:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]    # arr1->count
     1827:	48 89 c2             	mov    rdx,rax
     182a:	48 83 ea 01          	sub    rdx,0x1    # count-1
-    182e:	48 89 55 a0          	mov    QWORD PTR [rbp-0x60],rdx
-    1832:	48 8d 14 85 00 00 00 	lea    rdx,[rax*4+0x0]    # count*4 + 0
+    182e:	48 89 55 a0          	mov    QWORD PTR [rbp-0x60],rdx    # loop upper bound (<=(count-1))
+    1832:	48 8d 14 85 00 00 00 	lea    rdx,[rax*4+0x0]    # (count-1)*4 + 0
     1839:	00 
-    183a:	b8 10 00 00 00       	mov    eax,0x10
-    1843:	48 01 d0             	add    rax,rdx     # count*4 + 9
-    183f:	48 83 e8 01          	sub    rax,0x1     # 10-1 = 9
-    1846:	b9 10 00 00 00       	mov    ecx,0x10    # 10
-    184b:	ba 00 00 00 00       	mov    edx,0x0
-    1850:	48 f7 f1             	div    rcx
-    1853:	48 6b c0 10          	imul   rax,rax,0x10
-    1857:	48 29 c4             	sub    rsp,rax
-    185a:	48 89 e0             	mov    rax,rsp
-    185d:	48 83 c0 03          	add    rax,0x3
-    1861:	48 c1 e8 02          	shr    rax,0x2
-    1865:	48 c1 e0 02          	shl    rax,0x2
-    1869:	48 89 45 98          	mov    QWORD PTR [rbp-0x68],rax
+    183a:	b8 10 00 00 00       	mov    eax,0x10    # eax=16
+    1843:	48 01 d0             	add    rax,rdx     # rax=zext(eax)+ (count-1)*4 = (count-1)*4 + 16
+    183f:	48 83 e8 01          	sub    rax,0x1     # (count-1)*4 + 16 - 1 = (count-1)*4 + 15
+    1846:	b9 10 00 00 00       	mov    ecx,0x10    # ecx=16
+    184b:	ba 00 00 00 00       	mov    edx,0x0     # edx=0
+    1850:	48 f7 f1             	div    rcx         # (RDX:RAX)/RCX := (0:(count-1)*4 + 15)/16
+    1853:	48 6b c0 10          	imul   rax,rax,0x10    # rax = rax*16 = Quoitent*16
+    1857:	48 29 c4             	sub    rsp,rax    # Reserve VLA (stackarr)
+    185a:	48 89 e0             	mov    rax,rsp    # preserve rsp
+    185d:	48 83 c0 03          	add    rax,0x3    # rax=rsp+2
+    1861:	48 c1 e8 02          	shr    rax,0x2    # Shift logical right by 2-bits
+    1865:	48 c1 e0 02          	shl    rax,0x2    # Now shift left by 2-bits, damnn, is that dead code, it basically reverses what the previous instruction did!
+    1869:	48 89 45 98          	mov    QWORD PTR [rbp-0x68],rax    # rax=rsp=stackarr, effectively
     186d:	48 8d 05 27 09 00 00 	lea    rax,[rip+0x927]        # 219b <_IO_stdin_used+0x19b>
     1874:	48 89 c7             	mov    rdi,rax
-    1877:	e8 c4 f7 ff ff       	call   1040 <puts@plt>
-    187c:	48 8b 55 98          	mov    rdx,QWORD PTR [rbp-0x68]
+    1877:	e8 c4 f7 ff ff       	call   1040 <puts@plt>    # printf("Running export2stack()....")
+    187c:	48 8b 55 98          	mov    rdx,QWORD PTR [rbp-0x68]    # stackarr[0]
     1880:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
-    1887:	48 89 d6             	mov    rsi,rdx
-    188a:	48 89 c7             	mov    rdi,rax
+    1887:	48 89 d6             	mov    rsi,rdx    # (void*)(&stackarr[0])
+    188a:	48 89 c7             	mov    rdi,rax    # &arr1
     188d:	e8 df 04 00 00       	call   1d71 <export2stack>
-    1892:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax
+    1892:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res
     1895:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
     1898:	89 c6                	mov    esi,eax
     189a:	48 8d 05 7a 07 00 00 	lea    rax,[rip+0x77a]        # 201b <_IO_stdin_used+0x1b>
     18a1:	48 89 c7             	mov    rdi,rax
     18a4:	b8 00 00 00 00       	mov    eax,0x0
-    18a9:	e8 a2 f7 ff ff       	call   1050 <printf@plt>
-    18ae:	c7 45 cc 00 00 00 00 	mov    DWORD PTR [rbp-0x34],0x0
+    18a9:	e8 a2 f7 ff ff       	call   1050 <printf@plt>    # printf(res)
+    18ae:	c7 45 cc 00 00 00 00 	mov    DWORD PTR [rbp-0x34],0x0    # i=0 (init val)
     18b5:	eb 27                	jmp    18de <main+0x745>
-    18b7:	48 8b 45 98          	mov    rax,QWORD PTR [rbp-0x68]
-    18bb:	8b 55 cc             	mov    edx,DWORD PTR [rbp-0x34]
+    18b7:	48 8b 45 98          	mov    rax,QWORD PTR [rbp-0x68]     # &stackarr[0]  (base)
+    18bb:	8b 55 cc             	mov    edx,DWORD PTR [rbp-0x34]     # i
     18be:	48 63 d2             	movsxd rdx,edx
-    18c1:	8b 04 90             	mov    eax,DWORD PTR [rax+rdx*4]
-    18c4:	89 c6                	mov    esi,eax
+    18c1:	8b 04 90             	mov    eax,DWORD PTR [rax+rdx*4]    # base + (i*4)
+    18c4:	89 c6                	mov    esi,eax    # val
     18c6:	48 8d 05 06 08 00 00 	lea    rax,[rip+0x806]        # 20d3 <_IO_stdin_used+0xd3>
     18cd:	48 89 c7             	mov    rdi,rax
     18d0:	b8 00 00 00 00       	mov    eax,0x0
-    18d5:	e8 76 f7 ff ff       	call   1050 <printf@plt>
-    18da:	83 45 cc 01          	add    DWORD PTR [rbp-0x34],0x1
-    18de:	8b 45 cc             	mov    eax,DWORD PTR [rbp-0x34]
-    18e1:	48 63 d0             	movsxd rdx,eax
-    18e4:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]
-    18e8:	48 39 c2             	cmp    rdx,rax
+    18d5:	e8 76 f7 ff ff       	call   1050 <printf@plt>    # printf("%d, ", val)
+    18da:	83 45 cc 01          	add    DWORD PTR [rbp-0x34],0x1    # i++
+    18de:	8b 45 cc             	mov    eax,DWORD PTR [rbp-0x34]    # load i
+    18e1:	48 63 d0             	movsxd rdx,eax    # sign-extend i to 64-bit as arr.count is a 64-bit value
+    18e4:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]    # arr1.count
+    18e8:	48 39 c2             	cmp    rdx,rax    # i<arr1.count
     18eb:	72 ca                	jb     18b7 <main+0x71e>
     18ed:	48 8d 05 e4 07 00 00 	lea    rax,[rip+0x7e4]        # 20d8 <_IO_stdin_used+0xd8>
     18f4:	48 89 c7             	mov    rdi,rax
     18f7:	e8 44 f7 ff ff       	call   1040 <puts@plt>
-    18fc:	c7 85 fc fe ff ff 4e 	mov    DWORD PTR [rbp-0x104],0x4e
+    18fc:	c7 85 fc fe ff ff 4e 	mov    DWORD PTR [rbp-0x104],0x4e    # store 78 at some place on sstack
     1903:	00 00 00 
     1906:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]
-    190a:	48 89 c6             	mov    rsi,rax
+    190a:	48 89 c6             	mov    rsi,rax    # arr->count
     190d:	48 8d 05 a2 08 00 00 	lea    rax,[rip+0x8a2]        # 21b6 <_IO_stdin_used+0x1b6>
     1914:	48 89 c7             	mov    rdi,rax
     1917:	b8 00 00 00 00       	mov    eax,0x0
-    191c:	e8 2f f7 ff ff       	call   1050 <printf@plt>
+    191c:	e8 2f f7 ff ff       	call   1050 <printf@plt>    # printf(count before)
     1921:	48 8d 05 a2 08 00 00 	lea    rax,[rip+0x8a2]        # 21ca <_IO_stdin_used+0x1ca>
     1928:	48 89 c7             	mov    rdi,rax
-    192b:	e8 10 f7 ff ff       	call   1040 <puts@plt>
+    192b:	e8 10 f7 ff ff       	call   1040 <puts@plt>    # printf("\n\n")
     1930:	48 8d 8d fc fe ff ff 	lea    rcx,[rbp-0x104]
-    1937:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
-    193e:	ba 0e 00 00 00       	mov    edx,0xe
-    1943:	48 89 ce             	mov    rsi,rcx
-    1946:	48 89 c7             	mov    rdi,rax
+    1937:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]     # &arr
+    193e:	ba 0e 00 00 00       	mov    edx,0xe    # idx=14
+    1943:	48 89 ce             	mov    rsi,rcx    # new_val=&(78)
+    1946:	48 89 c7             	mov    rdi,rax    # &arr
     1949:	e8 4f 04 00 00       	call   1d9d <insertidx>
-    194e:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax
+    194e:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res
     1951:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
     1954:	89 c6                	mov    esi,eax
     1956:	48 8d 05 be 06 00 00 	lea    rax,[rip+0x6be]        # 201b <_IO_stdin_used+0x1b>
     195d:	48 89 c7             	mov    rdi,rax
     1960:	b8 00 00 00 00       	mov    eax,0x0
-    1965:	e8 e6 f6 ff ff       	call   1050 <printf@plt>
-    196a:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]
+    1965:	e8 e6 f6 ff ff       	call   1050 <printf@plt>    # printf(res)
+    196a:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]    # arr->count
     196e:	48 89 c6             	mov    rsi,rax
     1971:	48 8d 05 6a 08 00 00 	lea    rax,[rip+0x86a]        # 21e2 <_IO_stdin_used+0x1e2>
     1978:	48 89 c7             	mov    rdi,rax
     197b:	b8 00 00 00 00       	mov    eax,0x0
-    1980:	e8 cb f6 ff ff       	call   1050 <printf@plt>
+    1980:	e8 cb f6 ff ff       	call   1050 <printf@plt>    # printf(count after)
     1985:	48 c7 45 c0 00 00 00 	mov    QWORD PTR [rbp-0x40],0x0
     198c:	00 
     198d:	eb 33                	jmp    19c2 <main+0x829>
@@ -616,9 +616,9 @@ Disassembly of section .text:
     19f1:	48 8d 05 be 07 00 00 	lea    rax,[rip+0x7be]        # 21b6 <_IO_stdin_used+0x1b6>
     19f8:	48 89 c7             	mov    rdi,rax
     19fb:	b8 00 00 00 00       	mov    eax,0x0
-    1a00:	e8 4b f6 ff ff       	call   1050 <printf@plt>
-    1a05:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
-    1a0c:	be 0e 00 00 00       	mov    esi,0xe
+    1a00:	e8 4b f6 ff ff       	call   1050 <printf@plt>    # printf(count before)
+    1a05:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]    # &arr
+    1a0c:	be 0e 00 00 00       	mov    esi,0xe    # idx=14
     1a11:	48 89 c7             	mov    rdi,rax
     1a14:	e8 2d 04 00 00       	call   1e46 <removeidx>
     1a19:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax
@@ -627,13 +627,13 @@ Disassembly of section .text:
     1a21:	48 8d 05 f3 05 00 00 	lea    rax,[rip+0x5f3]        # 201b <_IO_stdin_used+0x1b>
     1a28:	48 89 c7             	mov    rdi,rax
     1a2b:	b8 00 00 00 00       	mov    eax,0x0
-    1a30:	e8 1b f6 ff ff       	call   1050 <printf@plt>
+    1a30:	e8 1b f6 ff ff       	call   1050 <printf@plt>    # printf(res)
     1a35:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]
     1a39:	48 89 c6             	mov    rsi,rax
     1a3c:	48 8d 05 9f 07 00 00 	lea    rax,[rip+0x79f]        # 21e2 <_IO_stdin_used+0x1e2>
     1a43:	48 89 c7             	mov    rdi,rax
     1a46:	b8 00 00 00 00       	mov    eax,0x0
-    1a4b:	e8 00 f6 ff ff       	call   1050 <printf@plt>
+    1a4b:	e8 00 f6 ff ff       	call   1050 <printf@plt>    # printf(count after)
     1a50:	48 c7 45 b8 00 00 00 	mov    QWORD PTR [rbp-0x48],0x0
     1a57:	00 
     1a58:	eb 33                	jmp    1a8d <main+0x8f4>
@@ -655,9 +655,9 @@ Disassembly of section .text:
     1a97:	48 8d 05 3a 06 00 00 	lea    rax,[rip+0x63a]        # 20d8 <_IO_stdin_used+0xd8>
     1a9e:	48 89 c7             	mov    rdi,rax
     1aa1:	e8 9a f5 ff ff       	call   1040 <puts@plt>
-    1aa6:	48 89 dc             	mov    rsp,rbx
+    1aa6:	48 89 dc             	mov    rsp,rbx    # restore rsp
     1aa9:	b8 00 00 00 00       	mov    eax,0x0
-    1aae:	48 8b 5d f8          	mov    rbx,QWORD PTR [rbp-0x8]
+    1aae:	48 8b 5d f8          	mov    rbx,QWORD PTR [rbp-0x8]    # restore rbx
     1ab2:	c9                   	leave
     1ab3:	c3                   	ret
 
