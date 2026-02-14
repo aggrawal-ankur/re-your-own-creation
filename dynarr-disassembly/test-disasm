@@ -142,7 +142,7 @@ Disassembly of section .text:
     11a5:	48 89 e0             	mov    rax,rsp
     11a8:	48 89 c3             	mov    rbx,rax
     11ab:	66 0f ef c0          	pxor   xmm0,xmm0
-    11af:	0f 29 85 70 ff ff ff 	movaps XMMWORD PTR [rbp-0x90],xmm0    # arr1
+    11af:	0f 29 85 70 ff ff ff 	movaps XMMWORD PTR [rbp-0x90],xmm0    # arr
     11b6:	0f 29 45 80          	movaps XMMWORD PTR [rbp-0x80],xmm0
     11ba:	48 8d 05 47 0e 00 00 	lea    rax,[rip+0xe47]        # 2008 <_IO_stdin_used+0x8>
     11c1:	48 89 c7             	mov    rdi,rax
@@ -150,7 +150,7 @@ Disassembly of section .text:
     11c9:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
     11d0:	ba 0a 00 00 00       	mov    edx,0xa    # rdx=10=capacity
     11d5:	be 04 00 00 00       	mov    esi,0x4    # rsi=sizeof(int)=4
-    11da:	48 89 c7             	mov    rdi,rax    # rdi=&arr1
+    11da:	48 89 c7             	mov    rdi,rax    # rdi=&arr
     11dd:	e8 d2 08 00 00       	call   1ab4 <init>
     11e2:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res=init(..)
     11e5:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
@@ -185,8 +185,8 @@ Disassembly of section .text:
     126b:	e8 d0 fd ff ff       	call   1040 <puts@plt>    # printf("Running extend()....")
     1270:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
     1277:	be 0a 00 00 00       	mov    esi,0xa    # add=10
-    127c:	48 89 c7             	mov    rdi,rax    # &arr1
-    127f:	e8 a1 08 00 00       	call   1b25 <extend>    # extend(&arr1, 10)
+    127c:	48 89 c7             	mov    rdi,rax    # &arr
+    127f:	e8 a1 08 00 00       	call   1b25 <extend>    # extend(&arr, 10)
     1284:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res=extend(..)
     1287:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
     128a:	89 c6                	mov    esi,eax
@@ -221,10 +221,10 @@ Disassembly of section .text:
     1314:	48 89 c7             	mov    rdi,rax
     1317:	e8 24 fd ff ff       	call   1040 <puts@plt>    # printf("Running pushOne().....")
     131c:	48 8d 95 6c ff ff ff 	lea    rdx,[rbp-0x94]    # &var
-    1323:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]    # &arr1
+    1323:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]    # &arr
     132a:	48 89 d6             	mov    rsi,rdx    # &var
-    132d:	48 89 c7             	mov    rdi,rax    # &arr1
-    1330:	e8 56 08 00 00       	call   1b8b <pushOne>    # pushOne(&arr1, &var)
+    132d:	48 89 c7             	mov    rdi,rax    # &arr
+    1330:	e8 56 08 00 00       	call   1b8b <pushOne>    # pushOne(&arr, &var)
     1335:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res=pushOne
     1338:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
     133b:	89 c6                	mov    esi,eax
@@ -260,10 +260,10 @@ Disassembly of section .text:
     13ca:	00 00 00 
     13cd:	eb 28                	jmp    13f7 <main+0x25e>
     13cf:	48 8d 95 f8 fe ff ff 	lea    rdx,[rbp-0x108]    # &i
-    13d6:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]     # &arr1
+    13d6:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]     # &arr
     13dd:	48 89 d6             	mov    rsi,rdx    # &i
-    13e0:	48 89 c7             	mov    rdi,rax    # &arr1
-    13e3:	e8 a3 07 00 00       	call   1b8b <pushOne>    # pushOne(&arr1, &i)
+    13e0:	48 89 c7             	mov    rdi,rax    # &arr
+    13e3:	e8 a3 07 00 00       	call   1b8b <pushOne>    # pushOne(&arr, &i)
     13e8:	8b 85 f8 fe ff ff    	mov    eax,DWORD PTR [rbp-0x108]    # load i
     13ee:	83 c0 01             	add    eax,0x1    # i++
     13f1:	89 85 f8 fe ff ff    	mov    DWORD PTR [rbp-0x108],eax    # update i
@@ -325,10 +325,10 @@ Disassembly of section .text:
     1500:	c7 85 68 ff ff ff 56 	mov    DWORD PTR [rbp-0x98],0x56    # sarr[14]=86
     1507:	00 00 00 
     150a:	48 8d 8d 30 ff ff ff 	lea    rcx,[rbp-0xd0]   # &sarr[0]
-    1511:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]   # &arr1
+    1511:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]   # &arr
     1518:	ba 0f 00 00 00       	mov    edx,0xf    # count=15
     151d:	48 89 ce             	mov    rsi,rcx    # &sarr[0]
-    1520:	48 89 c7             	mov    rdi,rax    # &arr1
+    1520:	48 89 c7             	mov    rdi,rax    # &arr
     1523:	e8 c7 06 00 00       	call   1bef <pushMany>
     1528:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res
     152b:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
@@ -365,11 +365,11 @@ Disassembly of section .text:
     15bd:	00 
     15be:	eb 33                	jmp    15f3 <main+0x45a>
     15c0:	48 8b 55 e8          	mov    rdx,QWORD PTR [rbp-0x18]    # load i
-    15c4:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]    # &arr1
+    15c4:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]    # &arr
     15cb:	48 89 d6             	mov    rsi,rdx    # idx=i
-    15ce:	48 89 c7             	mov    rdi,rax    # &arr1
+    15ce:	48 89 c7             	mov    rdi,rax    # &arr
     15d1:	e8 95 06 00 00       	call   1c6b <getelement>
-    15d6:	8b 00                	mov    eax,DWORD PTR [rax]    # *(int*)getelement(&arr1, idx)
+    15d6:	8b 00                	mov    eax,DWORD PTR [rax]    # *(int*)getelement(&arr, idx)
     15d8:	89 c6                	mov    esi,eax
     15da:	48 8d 05 f2 0a 00 00 	lea    rax,[rip+0xaf2]        # 20d3 <_IO_stdin_used+0xd3>
     15e1:	48 89 c7             	mov    rdi,rax
@@ -385,11 +385,11 @@ Disassembly of section .text:
     160c:	48 8d 05 cd 0a 00 00 	lea    rax,[rip+0xacd]        # 20e0 <_IO_stdin_used+0xe0>
     1613:	48 89 c7             	mov    rdi,rax
     1616:	e8 25 fa ff ff       	call   1040 <puts@plt>    # printf("getelement where the base is hoisted outside")
-    161b:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]     # &arr1
+    161b:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]     # &arr
     1622:	be 00 00 00 00       	mov    esi,0x0    # idx=0
-    1627:	48 89 c7             	mov    rdi,rax    # &arr1
+    1627:	48 89 c7             	mov    rdi,rax    # &arr
     162a:	e8 3c 06 00 00       	call   1c6b <getelement>
-    162f:	48 89 45 e0          	mov    QWORD PTR [rbp-0x20],rax    # getelement(&arr1, idx=0)
+    162f:	48 89 45 e0          	mov    QWORD PTR [rbp-0x20],rax    # getelement(&arr, idx=0)
     1633:	48 c7 45 d8 00 00 00 	mov    QWORD PTR [rbp-0x28],0x0    # i=0 (init val, loop)
     163a:	00 
     163b:	eb 29                	jmp    1666 <main+0x4cd>
@@ -412,7 +412,7 @@ Disassembly of section .text:
     167f:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
     1686:	be 13 00 00 00       	mov    esi,0x13    # idx=19
     168b:	48 89 c7             	mov    rdi,rax
-    168e:	e8 d8 05 00 00       	call   1c6b <getelement>    # getelement(&arr1, idx=19)
+    168e:	e8 d8 05 00 00       	call   1c6b <getelement>    # getelement(&arr, idx=19)
     1693:	48 89 45 a8          	mov    QWORD PTR [rbp-0x58],rax     # idx19
     1697:	c7 85 2c ff ff ff 37 	mov    DWORD PTR [rbp-0xd4],0x37    # replacement int (55)
     169e:	00 00 00 
@@ -427,11 +427,11 @@ Disassembly of section .text:
     16c2:	b8 00 00 00 00       	mov    eax,0x0
     16c7:	e8 84 f9 ff ff       	call   1050 <printf@plt>    # printf("idx before")
     16cc:	48 8d 8d 2c ff ff ff 	lea    rcx,[rbp-0xd4]    # &(55)
-    16d3:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]    # &arr1
+    16d3:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]    # &arr
     16da:	ba 13 00 00 00       	mov    edx,0x13    # idx=19
     16df:	48 89 ce             	mov    rsi,rcx
     16e2:	48 89 c7             	mov    rdi,rax
-    16e5:	e8 ba 05 00 00       	call   1ca4 <setidx>    # setidx(&arr1, replacement, idx)
+    16e5:	e8 ba 05 00 00       	call   1ca4 <setidx>    # setidx(&arr, replacement, idx)
     16ea:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res
     16ed:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
     16f0:	89 c6                	mov    esi,eax
@@ -455,7 +455,7 @@ Disassembly of section .text:
     1743:	48 8d 05 18 0a 00 00 	lea    rax,[rip+0xa18]        # 2162 <_IO_stdin_used+0x162>
     174a:	48 89 c7             	mov    rdi,rax
     174d:	e8 ee f8 ff ff       	call   1040 <puts@plt>    # printf("Running init() on destArr....")
-    1752:	48 8b 55 80          	mov    rdx,QWORD PTR [rbp-0x80]    # cap=arr1->count
+    1752:	48 8b 55 80          	mov    rdx,QWORD PTR [rbp-0x80]    # cap=arr->count
     1756:	48 8d 85 00 ff ff ff 	lea    rax,[rbp-0x100]
     175d:	be 04 00 00 00       	mov    esi,0x4    # elem_size=sizeof(int)=4
     1762:	48 89 c7             	mov    rdi,rax    # &arr2
@@ -471,10 +471,10 @@ Disassembly of section .text:
     178d:	48 89 c7             	mov    rdi,rax
     1790:	e8 ab f8 ff ff       	call   1040 <puts@plt>    # printf("\n\n")
     1795:	48 8d 95 00 ff ff ff 	lea    rdx,[rbp-0x100]    # &destArr
-    179c:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]     # &arr1
+    179c:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]     # &arr
     17a3:	48 89 d6             	mov    rsi,rdx
     17a6:	48 89 c7             	mov    rdi,rax
-    17a9:	e8 3b 05 00 00       	call   1ce9 <mergedyn2dyn>    # mergedyn2dyn(&arr1, &destArr)
+    17a9:	e8 3b 05 00 00       	call   1ce9 <mergedyn2dyn>    # mergedyn2dyn(&arr, &destArr)
     17ae:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res
     17b1:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
     17b4:	89 c6                	mov    esi,eax
@@ -503,7 +503,7 @@ Disassembly of section .text:
     1814:	48 8d 05 bd 08 00 00 	lea    rax,[rip+0x8bd]        # 20d8 <_IO_stdin_used+0xd8>
     181b:	48 89 c7             	mov    rdi,rax
     181e:	e8 1d f8 ff ff       	call   1040 <puts@plt>    # printf("\n\n")
-    1823:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]    # arr1->count
+    1823:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]    # arr->count
     1827:	48 89 c2             	mov    rdx,rax
     182a:	48 83 ea 01          	sub    rdx,0x1    # count-1
     182e:	48 89 55 a0          	mov    QWORD PTR [rbp-0x60],rdx    # loop upper bound (<=(count-1))
@@ -528,7 +528,7 @@ Disassembly of section .text:
     187c:	48 8b 55 98          	mov    rdx,QWORD PTR [rbp-0x68]    # stackarr[0]
     1880:	48 8d 85 70 ff ff ff 	lea    rax,[rbp-0x90]
     1887:	48 89 d6             	mov    rsi,rdx    # (void*)(&stackarr[0])
-    188a:	48 89 c7             	mov    rdi,rax    # &arr1
+    188a:	48 89 c7             	mov    rdi,rax    # &arr
     188d:	e8 df 04 00 00       	call   1d71 <export2stack>
     1892:	89 45 b4             	mov    DWORD PTR [rbp-0x4c],eax    # res
     1895:	8b 45 b4             	mov    eax,DWORD PTR [rbp-0x4c]
@@ -551,8 +551,8 @@ Disassembly of section .text:
     18da:	83 45 cc 01          	add    DWORD PTR [rbp-0x34],0x1    # i++
     18de:	8b 45 cc             	mov    eax,DWORD PTR [rbp-0x34]    # load i
     18e1:	48 63 d0             	movsxd rdx,eax    # sign-extend i to 64-bit as arr.count is a 64-bit value
-    18e4:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]    # arr1.count
-    18e8:	48 39 c2             	cmp    rdx,rax    # i<arr1.count
+    18e4:	48 8b 45 80          	mov    rax,QWORD PTR [rbp-0x80]    # arr.count
+    18e8:	48 39 c2             	cmp    rdx,rax    # i<arr.count
     18eb:	72 ca                	jb     18b7 <main+0x71e>
     18ed:	48 8d 05 e4 07 00 00 	lea    rax,[rip+0x7e4]        # 20d8 <_IO_stdin_used+0xd8>
     18f4:	48 89 c7             	mov    rdi,rax
